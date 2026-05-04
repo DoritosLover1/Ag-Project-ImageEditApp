@@ -1,6 +1,7 @@
-package additional;
+package uiframe;
 
-import additional.*;
+import models.*;
+import network.NetworkProtocol;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -20,11 +21,9 @@ public class DrawingCanvas extends JPanel {
 
     public enum Tool { SELECT, RECTANGLE, CIRCLE, LINE, FREEHAND }
 
-    // --- Canvas items ---
     private final List<CanvasItem> items = new CopyOnWriteArrayList<>();
     private final Map<String, CursorPosition> remoteCursors = new HashMap<>();
 
-    // --- Drawing state ---
     private Tool currentTool = Tool.FREEHAND;
     private Color currentColor = Color.BLACK;
     private int strokeWidth = 2;
@@ -34,15 +33,13 @@ public class DrawingCanvas extends JPanel {
     private boolean drawing = false;
     private List<Point> freehandPoints = new ArrayList<>();
 
-    // --- Selection state (Paint-style area cut) ---
-    private Rectangle selectionRect = null;   // current drag rect while in SELECT mode
+    private Rectangle selectionRect = null; 
     private boolean selectDragging = false;
 
-    // --- Callbacks ---
     private Consumer<DrawShape> onShapeDrawn;
     private Consumer<PastedImage> onImagePasted;
     private Consumer<CursorPosition> onCursorMoved;
-    private Consumer<List<String>> onItemsCut;  // bulk delete: list of itemIds
+    private Consumer<List<String>> onItemsCut; 
     private Runnable onItemsChanged;
 
     private String myNickname;
@@ -51,7 +48,6 @@ public class DrawingCanvas extends JPanel {
     private long lastCursorSend = 0;
     private static final long CURSOR_THROTTLE_MS = 33;
 
-    // Animated selection dash offset
     private int dashOffset = 0;
     private javax.swing.Timer dashTimer;
 
@@ -60,14 +56,12 @@ public class DrawingCanvas extends JPanel {
         setPreferredSize(new Dimension(1200, 800));
         setupMouseListeners();
         setupKeyBindings();
-        // Animate the selection dashes like Paint
         dashTimer = new javax.swing.Timer(80, e -> {
             if (selectionRect != null) { dashOffset = (dashOffset + 1) % 12; repaint(); }
         });
         dashTimer.start();
     }
 
-    // ─────────────────────────── Mouse ───────────────────────────
 
     private void setupMouseListeners() {
         MouseAdapter adapter = new MouseAdapter() {
@@ -93,7 +87,6 @@ public class DrawingCanvas extends JPanel {
             public void mouseDragged(MouseEvent e) {
                 currentX = e.getX(); currentY = e.getY();
                 if (currentTool == Tool.SELECT) {
-                    // Update the selection rectangle live
                     selectionRect = makeRect(startX, startY, currentX, currentY);
                     repaint();
                     return;
@@ -111,7 +104,6 @@ public class DrawingCanvas extends JPanel {
                 if (currentTool == Tool.SELECT) {
                     selectDragging = false;
                     selectionRect = makeRect(startX, startY, currentX, currentY);
-                    // Only cut if dragged a meaningful area
                     if (selectionRect.width > 4 && selectionRect.height > 4) {
                         applyCut();
                     } else {
@@ -134,35 +126,31 @@ public class DrawingCanvas extends JPanel {
         addMouseMotionListener(adapter);
     }
 
-    /** Cut all items that intersect the current selectionRect */
     private void applyCut() {
         if (selectionRect == null) return;
         List<String> toDelete = new ArrayList<>();
         for (CanvasItem item : items) {
             Rectangle bounds = getBounds(item);
             if (bounds != null && selectionRect.intersects(bounds)) {
-                String id = item.getId();
+                String id = item.getIdOfImage();
                 if (id != null) toDelete.add(id);
             }
         }
         selectionRect = null;
         if (!toDelete.isEmpty()) {
-            // Remove locally
             Set<String> idSet = new HashSet<>(toDelete);
-            items.removeIf(i -> idSet.contains(i.getId()));
+            items.removeIf(i -> idSet.contains(i.getIdOfImage()));
             repaint();
             fireItemsChanged();
-            // Notify server / app
             if (onItemsCut != null) onItemsCut.accept(toDelete);
         } else {
             repaint();
         }
     }
 
-    /** Remove items by id (called when DELETE_ITEMS arrives from server for other clients) */
     public void removeItemsByIds(List<String> ids) {
         Set<String> idSet = new HashSet<>(ids);
-        items.removeIf(i -> idSet.contains(i.getId()));
+        items.removeIf(i -> idSet.contains(i.getIdOfImage()));
         SwingUtilities.invokeLater(() -> { repaint(); fireItemsChanged(); });
     }
 
@@ -175,24 +163,24 @@ public class DrawingCanvas extends JPanel {
         if (item.getItemType() == CanvasItem.ItemType.IMAGE) {
             PastedImage pi = item.getImage();
             if (pi == null) return null;
-            return new Rectangle(pi.getX(), pi.getY(), pi.getWidth(), pi.getHeight());
+            return new Rectangle(pi.getXOfImage(), pi.getYOfImage(), pi.getWidthOfImage(), pi.getHeightOfImage());
         }
         DrawShape s = item.getShape();
         if (s == null) return null;
         switch (s.getShapeType()) {
             case RECTANGLE:
             case CIRCLE:
-                return new Rectangle(s.getX(), s.getY(), s.getWidth(), s.getHeight());
+                return new Rectangle(s.getXOfShape(), s.getYOfShape(), s.getWidthOfShape(), s.getHeightOfShape());
             case LINE: {
-                int x = Math.min(s.getX(), s.getX2());
-                int y = Math.min(s.getY(), s.getY2());
-                int w = Math.abs(s.getX2() - s.getX()) + 1;
-                int h = Math.abs(s.getY2() - s.getY()) + 1;
+                int x = Math.min(s.getXOfShape(), s.getX2OfShape());
+                int y = Math.min(s.getYOfShape(), s.getY2OfShape());
+                int w = Math.abs(s.getX2OfShape() - s.getXOfShape()) + 1;
+                int h = Math.abs(s.getY2OfShape() - s.getYOfShape()) + 1;
                 return new Rectangle(x, y, w, h);
             }
             case FREEHAND: {
-                int[] xs = s.getFreehandXPoints();
-                int[] ys = s.getFreehandYPoints();
+                int[] xs = s.getFreehandXPointsOfShape();
+                int[] ys = s.getFreehandYPointsOfShape();
                 if (xs == null || xs.length == 0) return null;
                 int minX = Arrays.stream(xs).min().getAsInt();
                 int minY = Arrays.stream(ys).min().getAsInt();
@@ -204,7 +192,6 @@ public class DrawingCanvas extends JPanel {
         }
     }
 
-    // ─────────────────────────── Cursor ───────────────────────────
 
     private void sendCursorMove(int x, int y) {
         long now = System.currentTimeMillis();
@@ -214,12 +201,11 @@ public class DrawingCanvas extends JPanel {
             onCursorMoved.accept(new CursorPosition(x, y, myNickname, myCursorColor));
     }
 
-    // ─────────────────────────── Draw shapes ───────────────────────────
 
     private void finalizeShape() {
         DrawShape shape = buildShape();
         if (shape == null) return;
-        shape.setId(UUID.randomUUID().toString());
+        shape.setIdOfShape(UUID.randomUUID().toString());
         items.add(new CanvasItem(shape, myNickname));
         repaint();
         fireItemsChanged();
@@ -228,9 +214,9 @@ public class DrawingCanvas extends JPanel {
 
     private DrawShape buildShape() {
         DrawShape s = new DrawShape();
-        s.setColor(colorToHex(currentColor));
-        s.setStrokeWidth(strokeWidth);
-        s.setFilled(filled);
+        s.setColorOfShape(colorToHex(currentColor));
+        s.setStrokeWidthOfShape(strokeWidth);
+        s.setFilledShape(filled);
 
         int x = Math.min(startX, currentX);
         int y = Math.min(startY, currentY);
@@ -241,32 +227,30 @@ public class DrawingCanvas extends JPanel {
             case RECTANGLE:
                 if (w < 3 && h < 3) return null;
                 s.setShapeType(DrawShape.ShapeType.RECTANGLE);
-                s.setX(x); s.setY(y); s.setWidth(w); s.setHeight(h);
+                s.setXOfShape(x); s.setYOfShape(y); s.setWidthOfShape(w); s.setHeightOfShape(h);
                 return s;
             case CIRCLE:
                 if (w < 3 && h < 3) return null;
                 s.setShapeType(DrawShape.ShapeType.CIRCLE);
-                s.setX(x); s.setY(y); s.setWidth(w); s.setHeight(h);
+                s.setXOfShape(x); s.setYOfShape(y); s.setWidthOfShape(w); s.setHeightOfShape(h);
                 return s;
             case LINE:
                 if (w < 3 && h < 3) return null;
                 s.setShapeType(DrawShape.ShapeType.LINE);
-                s.setX(startX); s.setY(startY);
-                s.setX2(currentX); s.setY2(currentY);
+                s.setXOfShape(startX); s.setYOfShape(startY);
+                s.setX2OfShape(currentX); s.setY2OfShape(currentY);
                 return s;
             case FREEHAND:
                 if (freehandPoints.size() < 2) return null;
                 s.setShapeType(DrawShape.ShapeType.FREEHAND);
                 int[] xs = freehandPoints.stream().mapToInt(p -> p.x).toArray();
                 int[] ys = freehandPoints.stream().mapToInt(p -> p.y).toArray();
-                s.setFreehandXPoints(xs); s.setFreehandYPoints(ys);
+                s.setFreehandXPointsOfShape(xs); s.setFreehandYPointsOfShape(ys);
                 return s;
             default:
                 return null;
         }
     }
-
-    // ─────────────────────────── Keyboard ───────────────────────────
 
     private void setupKeyBindings() {
         setFocusable(true);
@@ -296,11 +280,18 @@ public class DrawingCanvas extends JPanel {
                 byte[] bytes = toBytes(bi);
 
                 PastedImage pi = new PastedImage();
-                pi.setId(UUID.randomUUID().toString());
+                pi.setIdOfImage(UUID.randomUUID().toString());
                 pi.setImageData(bytes);
-                pi.setX(50); pi.setY(50);
-                pi.setWidth(Math.min(bi.getWidth(), 400));
-                pi.setHeight(Math.min(bi.getHeight(), 300));
+                Point mousePos = getMousePosition();
+                if(mousePos != null) {
+                    pi.setXOfImage(mousePos.x - bi.getWidth() / 2);
+                    pi.setYOfImage(mousePos.y - bi.getHeight() / 2);
+                } else {
+                	pi.setXOfImage(50); 
+                	pi.setYOfImage(50);
+                }
+                pi.setWidthOfImage(Math.min(bi.getWidth(), 400));
+                pi.setHeightOfImage(Math.min(bi.getHeight(), 300));
 
                 items.add(new CanvasItem(pi, myNickname));
                 repaint();
@@ -312,15 +303,12 @@ public class DrawingCanvas extends JPanel {
         }
     }
 
-    // ─────────────────────────── Paint ───────────────────────────
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Draw all items
         for (CanvasItem item : items) {
             if (item.getItemType() == CanvasItem.ItemType.SHAPE)
                 drawShape(g2, item.getShape());
@@ -328,27 +316,22 @@ public class DrawingCanvas extends JPanel {
                 drawImage(g2, item.getImage());
         }
 
-        // Draw in-progress shape preview
         if (drawing && currentTool != Tool.FREEHAND && currentTool != Tool.SELECT) {
             g2.setColor(currentColor);
             g2.setStroke(new BasicStroke(strokeWidth));
             drawPreview(g2);
         }
 
-        // Draw Paint-style selection rectangle
         if (selectionRect != null) {
-            // Semi-transparent blue fill
             g2.setColor(new Color(100, 160, 255, 40));
             g2.fillRect(selectionRect.x, selectionRect.y, selectionRect.width, selectionRect.height);
 
-            // Animated dashed border (like Paint)
             float[] dash = {6f, 4f};
             g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
                     10f, dash, dashOffset));
             g2.setColor(new Color(30, 100, 220));
             g2.drawRect(selectionRect.x, selectionRect.y, selectionRect.width, selectionRect.height);
 
-            // "Kes" hint label inside the rect if large enough
             if (selectionRect.width > 60 && selectionRect.height > 24 && !selectDragging) {
                 g2.setFont(new Font("SansSerif", Font.BOLD, 11));
                 String hint = "✂ Kes";
@@ -362,7 +345,6 @@ public class DrawingCanvas extends JPanel {
             }
         }
 
-        // Remote cursors
         synchronized (remoteCursors) {
             for (CursorPosition cp : remoteCursors.values())
                 drawRemoteCursor(g2, cp);
@@ -371,29 +353,29 @@ public class DrawingCanvas extends JPanel {
 
     private void drawShape(Graphics2D g2, DrawShape s) {
         if (s == null) return;
-        g2.setColor(hexToColor(s.getColor()));
-        g2.setStroke(new BasicStroke(s.getStrokeWidth(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.setColor(hexToColor(s.getColorOfShape()));
+        g2.setStroke(new BasicStroke(s.getStrokeWidthOfShape(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         switch (s.getShapeType()) {
             case RECTANGLE:
-                if (s.isFilled()) g2.fillRect(s.getX(), s.getY(), s.getWidth(), s.getHeight());
-                else              g2.drawRect(s.getX(), s.getY(), s.getWidth(), s.getHeight());
+                if (s.isFilledShape()) g2.fillRect(s.getXOfShape(), s.getYOfShape(), s.getWidthOfShape(), s.getHeightOfShape());
+                else              g2.drawRect(s.getXOfShape(), s.getYOfShape(), s.getWidthOfShape(), s.getHeightOfShape());
                 break;
             case CIRCLE:
-                if (s.isFilled()) g2.fillOval(s.getX(), s.getY(), s.getWidth(), s.getHeight());
-                else              g2.drawOval(s.getX(), s.getY(), s.getWidth(), s.getHeight());
+                if (s.isFilledShape()) g2.fillOval(s.getXOfShape(), s.getYOfShape(), s.getWidthOfShape(), s.getHeightOfShape());
+                else              g2.drawOval(s.getXOfShape(), s.getYOfShape(), s.getWidthOfShape(), s.getHeightOfShape());
                 break;
             case LINE:
-                g2.drawLine(s.getX(), s.getY(), s.getX2(), s.getY2());
+                g2.drawLine(s.getXOfShape(), s.getYOfShape(), s.getX2OfShape(), s.getY2OfShape());
                 break;
             case FREEHAND:
-                int[] xs = s.getFreehandXPoints();
-                int[] ys = s.getFreehandYPoints();
+                int[] xs = s.getFreehandXPointsOfShape();
+                int[] ys = s.getFreehandYPointsOfShape();
                 if (xs != null && xs.length > 1) g2.drawPolyline(xs, ys, xs.length);
                 break;
             case TEXT:
-                if (s.getText() != null) {
+                if (s.getTextOfShape() != null) {
                     g2.setFont(new Font("SansSerif", Font.PLAIN, 16));
-                    g2.drawString(s.getText(), s.getX(), s.getY());
+                    g2.drawString(s.getTextOfShape(), s.getXOfShape(), s.getYOfShape());
                 }
                 break;
         }
@@ -404,7 +386,7 @@ public class DrawingCanvas extends JPanel {
         try {
             BufferedImage img = ImageIO.read(new ByteArrayInputStream(pi.getImageData()));
             if (img != null)
-                g2.drawImage(img, pi.getX(), pi.getY(), pi.getWidth(), pi.getHeight(), null);
+                g2.drawImage(img, pi.getXOfImage(), pi.getYOfImage(), pi.getWidthOfImage(), pi.getHeightOfImage(), null);
         } catch (IOException e) { System.err.println("Image draw error: " + e.getMessage()); }
     }
 
@@ -436,7 +418,6 @@ public class DrawingCanvas extends JPanel {
         g2.drawString(cp.getUsername(), cp.getX() + 16, cp.getY() + 14);
     }
 
-    // ─────────────────────────── Public API ───────────────────────────
 
     public void addRemoteShape(DrawShape shape, String sender) {
         items.add(new CanvasItem(shape, sender));
@@ -449,7 +430,7 @@ public class DrawingCanvas extends JPanel {
     }
 
     public void removeItemById(String id) {
-        items.removeIf(i -> id.equals(i.getId()));
+        items.removeIf(i -> id.equals(i.getIdOfImage()));
         SwingUtilities.invokeLater(() -> { repaint(); fireItemsChanged(); });
     }
 
@@ -480,8 +461,6 @@ public class DrawingCanvas extends JPanel {
         if (onItemsChanged != null) onItemsChanged.run();
     }
 
-    // ─────────────────────────── Setters ───────────────────────────
-
     public void setCurrentTool(Tool tool) {
         this.currentTool = tool;
         if (tool == Tool.SELECT) {
@@ -498,15 +477,15 @@ public class DrawingCanvas extends JPanel {
     public void setStrokeWidth(int w) { this.strokeWidth = w; }
     public void setFilled(boolean f) { this.filled = f; }
     public void setUsername(String n) { this.myNickname = n; }
-    public void setCursorColor(Color cursorColor) { this.myCursorColor = cursorColor.toString(); }
-
+    public void setCursorColor(Color cursorColor) { 
+	     this.myCursorColor = String.format("#%02X%02X%02X", 
+	         cursorColor.getRed(), cursorColor.getGreen(), cursorColor.getBlue()); 
+	}
     public void setOnShapeDrawn(Consumer<DrawShape> cb) { this.onShapeDrawn = cb; }
     public void setOnImagePasted(Consumer<PastedImage> cb) { this.onImagePasted = cb; }
     public void setOnCursorMoved(Consumer<CursorPosition> cb) { this.onCursorMoved = cb; }
     public void setOnItemsCut(Consumer<List<String>> cb) { this.onItemsCut = cb; }
     public void setOnItemsChanged(Runnable cb) { this.onItemsChanged = cb; }
-
-    // ─────────────────────────── Helpers ───────────────────────────
 
     private static String colorToHex(Color c) {
         return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
@@ -540,4 +519,9 @@ public class DrawingCanvas extends JPanel {
         ImageIO.write(img, "PNG", bos);
         return bos.toByteArray();
     }
+    	
+	 public void addShapeSilently(DrawShape shape, String sender) {
+	     items.add(new CanvasItem(shape, sender));
+	     SwingUtilities.invokeLater(this::repaint);
+	 }
 }

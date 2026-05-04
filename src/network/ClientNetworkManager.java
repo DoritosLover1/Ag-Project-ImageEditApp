@@ -26,7 +26,7 @@ public class ClientNetworkManager {
                 socket = new Socket(host, port);
                 out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
-                
+
                 sendRaw(NetworkProtocol.buildLogin(username));
 
                 String line;
@@ -34,21 +34,24 @@ public class ClientNetworkManager {
                     final String msg = line;
                     SwingUtilities.invokeLater(() -> handleMessage(msg));
                 }
-            } catch (Exception e) { 
-                if (onError != null) SwingUtilities.invokeLater(() -> onError.accept(e.getMessage()));
-                e.printStackTrace(); 
+            } catch (Exception e) {
+                if (onError != null)
+                    SwingUtilities.invokeLater(() -> onError.accept(e.getMessage()));
+                e.printStackTrace();
             }
         }).start();
     }
 
     private void handleMessage(String raw) {
         String[] p = raw.split(NetworkProtocol.SEPARATOR);
-        if (p.length < 4) return;
+        if (p.length < 4)
+            return;
 
         String sender = p[2];
         String command = p[3];
 
-        if (sender.equals(username) && !command.equals(NetworkProtocol.CMD_CLEAR)) return;
+        if (sender.equals(username) && !command.equals(NetworkProtocol.CMD_CLEAR))
+            return;
 
         switch (command) {
             case NetworkProtocol.CMD_SQUARE:
@@ -60,7 +63,7 @@ public class ClientNetworkManager {
                 break;
             case NetworkProtocol.CMD_CURSOR:
                 canvas.updateRemoteCursor(new CursorPosition(
-                    Integer.parseInt(p[4]), Integer.parseInt(p[5]), sender, p[6]));
+                        Integer.parseInt(p[4]), Integer.parseInt(p[5]), sender, p[6]));
                 break;
             case NetworkProtocol.CMD_CLEAR:
                 canvas.clearCanvas();
@@ -79,7 +82,8 @@ public class ClientNetworkManager {
                 canvas.addRemoteImage(img, sender);
                 break;
             case NetworkProtocol.CMD_ROOM_INFO:
-                if (onRoomJoined != null) onRoomJoined.accept(p[4]);
+                if (onRoomJoined != null)
+                    onRoomJoined.accept(p[4]);
                 break;
             case NetworkProtocol.CMD_USER_LIST:
                 if (onUserListUpdated != null) {
@@ -88,7 +92,8 @@ public class ClientNetworkManager {
                 }
                 break;
             case NetworkProtocol.CMD_ERROR:
-                if (onError != null) onError.accept(p[4]);
+                if (onError != null)
+                    onError.accept(p[4]);
                 break;
         }
     }
@@ -114,10 +119,19 @@ public class ClientNetworkManager {
     }
 
     public void sendRaw(String data) {
-        if (out != null) out.println(data);
+        if (out != null)
+            out.println(data);
     }
 
-    public void setOnRoomJoined(Consumer<String> callback) { this.onRoomJoined = callback; }
-    public void setOnUserListUpdated(Consumer<java.util.List<String>> callback) { this.onUserListUpdated = callback; }
-    public void setOnError(Consumer<String> callback) { this.onError = callback; }
+    public void setOnRoomJoined(Consumer<String> callback) {
+        this.onRoomJoined = callback;
+    }
+
+    public void setOnUserListUpdated(Consumer<java.util.List<String>> callback) {
+        this.onUserListUpdated = callback;
+    }
+
+    public void setOnError(Consumer<String> callback) {
+        this.onError = callback;
+    }
 }

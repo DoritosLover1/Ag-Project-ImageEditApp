@@ -477,6 +477,12 @@ public class MainFrame {
 
         JButton leaveBtn = CustomButton.smallButtonGenerate("Ayrıl", theme);
         leaveBtn.addActionListener(e -> {
+            if (networkManager != null) {
+                networkManager.leaveRoom();
+            }
+            if (memberModel != null) memberModel.clear();
+            if (itemListModel != null) itemListModel.clear();
+            canvas.clearCanvas();
             goLobby();
         });
 

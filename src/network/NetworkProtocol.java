@@ -29,6 +29,7 @@ public class NetworkProtocol {
     public static final String CMD_LOGIN = "LOGIN";
     public static final String CMD_CREATE_ROOM = "CREATE_ROOM";
     public static final String CMD_JOIN_ROOM = "JOIN_ROOM";
+    public static final String CMD_LEAVE_ROOM = "LEAVE_ROOM";
     public static final String CMD_ROOM_INFO = "ROOM_INFO";
     public static final String CMD_USER_LIST = "USER_LIST";
     public static final String CMD_ERROR = "ERROR";
@@ -54,6 +55,10 @@ public class NetworkProtocol {
 
     public static String buildJoinRoom(String username, String code) {
         return buildBase(username, CMD_JOIN_ROOM, code);
+    }
+
+    public static String buildLeaveRoom(String username) {
+        return buildBase(username, CMD_LEAVE_ROOM, "LEAVE");
     }
 
     public static String buildRoomInfo(String code) {

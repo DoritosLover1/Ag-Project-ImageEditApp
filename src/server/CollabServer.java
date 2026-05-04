@@ -14,7 +14,7 @@ public class CollabServer {
         System.out.println("╔══════════════════════════════╗");
         System.out.println("║   CollabPaint Server v1.0    ║");
         System.out.println("║   Protocol: NetworkProtocol  ║");
-        System.out.println("║   TCP Port: " + TCP_PORT + "            ║");
+        System.out.println("║   TCP Port: " + TCP_PORT + " ║");
         System.out.println("╚══════════════════════════════╝");
 
         try (ServerSocket serverSocket = new ServerSocket(TCP_PORT)) {
@@ -29,7 +29,8 @@ public class CollabServer {
                     t.setDaemon(true);
                     t.start();
                 } catch (IOException e) {
-                    if (running) System.err.println("[SERVER] Accept error: " + e.getMessage());
+                    if (running)
+                        System.err.println("[SERVER] Accept error: " + e.getMessage());
                 }
             }
         }

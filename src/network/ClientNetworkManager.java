@@ -101,6 +101,10 @@ public class ClientNetworkManager {
         sendRaw(NetworkProtocol.buildJoinRoom(username, code));
     }
 
+    public void leaveRoom() {
+        sendRaw(NetworkProtocol.buildLeaveRoom(username));
+    }
+
     public void sendShape(DrawShape shape) {
         sendRaw(shape.toNetworkString(username));
     }

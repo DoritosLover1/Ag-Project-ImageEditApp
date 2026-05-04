@@ -88,6 +88,10 @@ public class ClientHandler implements Runnable {
                     }
                     break;
 
+                case NetworkProtocol.CMD_LEAVE_ROOM:
+                    leaveCurrentRoom();
+                    break;
+
                 case NetworkProtocol.CMD_SQUARE:
                 case NetworkProtocol.CMD_CIRCLE:
                 case NetworkProtocol.CMD_LINE:

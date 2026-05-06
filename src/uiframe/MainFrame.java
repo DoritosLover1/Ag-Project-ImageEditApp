@@ -1,4 +1,5 @@
 package uiframe;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
@@ -6,6 +7,7 @@ import java.awt.datatransfer.StringSelection;
 import models.*;
 import network.*;
 import customelements.CustomButton;
+
 public class MainFrame {
     JFrame frame;
     private String username;
@@ -24,6 +26,8 @@ public class MainFrame {
     private DefaultListModel<String> itemListModel;
     private static final Dimension LOGIN_SIZE = new Dimension(300, 280);
     private static final Dimension LOBBY_SIZE = new Dimension(400, 320);
+    private static final Dimension CANVAS_MIN_SIZE = new Dimension(1000, 600);
+
     public static class AppTheme {
         public Color background = new Color(45, 52, 80);
         public Color inputBg = new Color(30, 30, 50);
@@ -33,10 +37,13 @@ public class MainFrame {
         public Color titleText = Color.WHITE;
         public Color hintText = Color.LIGHT_GRAY;
     }
+
     public AppTheme theme = new AppTheme();
+
     public MainFrame() {
         init();
     }
+
     private void init() {
         frame = new JFrame("DEHSETÜL VAHŞET PAİNT");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -53,26 +60,34 @@ public class MainFrame {
         goLogin();
         frame.setVisible(true);
     }
+
     private void goLogin() {
         cardLayout.show(mainPanel, "LOGIN");
         resizeFrame(LOGIN_SIZE, false);
     }
+
     private void goLobby() {
         cardLayout.show(mainPanel, "LOBBY");
         resizeFrame(LOBBY_SIZE, false);
     }
+
     private void goCanvas() {
         roomCodeLabel.setText("Oda Kodu: " + myRoomCode);
         canvas.setUsername(username);
         canvas.setCursorColor(cursorColor);
         cardLayout.show(mainPanel, "CANVAS");
+        frame.setMinimumSize(CANVAS_MIN_SIZE);
         resizeFrame(null, true);
     }
+
     private void resizeFrame(Dimension size, boolean maximize) {
         if (maximize) {
             frame.setResizable(true);
-            frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+            if (frame.getExtendedState() != JFrame.MAXIMIZED_BOTH) {
+                frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+            }
         } else {
+            frame.setMinimumSize(size);
             frame.setExtendedState(JFrame.NORMAL);
             frame.setResizable(false);
             mainPanel.setPreferredSize(size);
@@ -80,6 +95,7 @@ public class MainFrame {
             frame.setLocationRelativeTo(null);
         }
     }
+
     private JToggleButton makeToolButton(String label, String tooltip) {
         JToggleButton btn = new JToggleButton(label) {
             @Override
@@ -107,6 +123,7 @@ public class MainFrame {
         btn.setContentAreaFilled(false);
         return btn;
     }
+
     private JPanel loginPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(theme.background);
@@ -159,6 +176,7 @@ public class MainFrame {
         usernameField.addActionListener(e -> loginBtn.doClick());
         return panel;
     }
+
     private JPanel lobbyPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(theme.background);
@@ -205,6 +223,7 @@ public class MainFrame {
         panel.add(center, BorderLayout.CENTER);
         return panel;
     }
+
     private JPanel canvasPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(theme.background);
@@ -228,6 +247,7 @@ public class MainFrame {
         panel.add(buildSidebar(), BorderLayout.EAST);
         return panel;
     }
+
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout());
         sidebar.setBackground(new Color(24, 24, 36));
@@ -279,6 +299,7 @@ public class MainFrame {
         sidebar.add(itemsBox, BorderLayout.CENTER);
         return sidebar;
     }
+
     private JLabel sectionTitle(String text) {
         JLabel lbl = new JLabel(text);
         lbl.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -290,6 +311,7 @@ public class MainFrame {
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         return lbl;
     }
+
     private JPanel createTopBarPanel() {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setBackground(theme.background);
@@ -314,12 +336,12 @@ public class MainFrame {
         JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0));
         center.setOpaque(false);
         String[][] tools = {
-                { "S", "Seç & Kes", "SELECT" },
-                { "K", "Kalem", "FREEHAND" },
-                { "R", "Dikdörtgen", "RECTANGLE" },
-                { "E", "Elips", "CIRCLE" },
-                { "C", "Çizgi", "LINE" },
-                { "T", "Üçgen", "TRIANGLE" },
+                { "[ ]", "Seç & Kes", "SELECT" },
+                { "~", "Kalem", "FREEHAND" },
+                { "[]", "Dikdörtgen", "RECTANGLE" },
+                { "()", "Elips", "CIRCLE" },
+                { "/", "Çizgi", "LINE" },
+                { "^", "Üçgen", "TRIANGLE" },
                 { "X", "Silgi", "ERASER" }
         };
         ButtonGroup toolGroup = new ButtonGroup();
@@ -418,6 +440,7 @@ public class MainFrame {
         topBar.add(right, BorderLayout.EAST);
         return topBar;
     }
+
     private void applyInputFieldStyle(JTextField field) {
         field.setFont(new Font("Arial", Font.PLAIN, 14));
         field.setBackground(theme.inputBg);
@@ -427,6 +450,7 @@ public class MainFrame {
                 BorderFactory.createLineBorder(theme.inputBorder),
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)));
     }
+
     private void openSettingsDialog() {
         JDialog dialog = new JDialog(frame, "Ayarlar", true);
         dialog.setLayout(new GridBagLayout());
@@ -503,6 +527,7 @@ public class MainFrame {
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
     }
+
     private void rebuildPanels() {
         mainPanel.removeAll();
         mainPanel.add(loginPanel(), "LOGIN");
@@ -513,6 +538,7 @@ public class MainFrame {
         canvas.setCursorColor(cursorColor);
         goLobby();
     }
+
     private Color getThemeColorByIndex(AppTheme t, int idx) {
         return switch (idx) {
             case 0 -> t.background;
@@ -525,6 +551,7 @@ public class MainFrame {
             default -> Color.GRAY;
         };
     }
+
     private void setupNetworkHooks() {
         if (networkManager == null)
             return;
@@ -542,6 +569,7 @@ public class MainFrame {
             }
         });
     }
+
     private void setThemeColorByIndex(AppTheme t, int idx, Color c) {
         switch (idx) {
             case 0 -> t.background = c;
@@ -553,6 +581,7 @@ public class MainFrame {
             case 6 -> t.hintText = c;
         }
     }
+
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());

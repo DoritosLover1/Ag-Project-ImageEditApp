@@ -1,7 +1,7 @@
 # RFC 001: PaiCollab Messaging Protocol (PCMP)
 
 **Status:** Final  
-**Version:** 1.2  
+**Version:** 1.3  
 **Transport:** TCP/IP  
 **Encoding:** UTF-8  
 
@@ -50,18 +50,19 @@ All messages follow a strict pipe-delimited format:
 
 ### 5.2. Drawing Commands
 
-Data fields for shapes follow specific patterns. Colors are typically Hex strings (e.g., `#FF0000`).
+Data fields for shapes follow specific patterns. Colors are Hex strings (e.g., `#FF0000`).
 
 | Command | Data Format | Description |
 | :--- | :--- | :--- |
-| `SQUARE` | `X\|Y\|W\|H\|Color\|Stroke\|Filled\|ID` | Draws a rectangle at (X,Y). |
-| `CIRCLE` | `X\|Y\|W\|H\|Color\|Stroke\|Filled\|ID` | Draws an ellipse inside the (X,Y,W,H) bounds. |
-| `LINE` | `X1\|Y1\|X2\|Y2\|Color\|Stroke\|ID` | Draws a line from (X1,Y1) to (X2,Y2). |
-| `FREEHAND` | `Xs\|Ys\|Color\|Stroke\|ID` | `Xs` and `Ys` are comma-separated coordinate lists. |
-| `TEXT` | `X\|Y\|Content\|Color\|ID` | Renders text at (X,Y). |
-| `IMAGE` | `X\|Y\|W\|H\|Base64\|ID` | Renders a Base64 encoded image at (X,Y). |
-| `DELETE` | `TargetID` | Removes the object with the specified `ID`. |
-| `CLEAR` | `ALL` | Wipes the entire canvas for everyone in the room. |
+| `SQUARE` | `X|Y|W|H|Color|Stroke|Filled|ID` | Draws a rectangle at (X,Y). |
+| `CIRCLE` | `X|Y|W|H|Color|Stroke|Filled|ID` | Draws an ellipse inside the bounds. |
+| `TRIANGLE` | `X1|Y1|X2|Y2|X3|Y3|Color|Stroke|Filled|ID` | Draws a polygon with 3 vertices. |
+| `LINE` | `X1|Y1|X2|Y2|Color|Stroke|ID` | Draws a line from (X1,Y1) to (X2,Y2). |
+| `FREEHAND` | `Xs|Ys|Color|Stroke|ID` | `Xs/Ys` are comma-separated coordinate lists. |
+| `TEXT` | `X|Y|Content|Color|ID` | Renders text at (X,Y). |
+| `IMAGE` | `X|Y|W|H|Base64|ID` | Renders a Base64 image at (X,Y). |
+| `DELETE` | `TargetID` | Removes specified object (Used by Selection and Eraser). |
+| `CLEAR` | `ALL` | Wipes the entire canvas. |
 
 ### 5.3. Synchronization
 

@@ -1,39 +1,29 @@
 package uiframe;
-
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
-
 import models.*;
 import network.*;
 import customelements.CustomButton;
-
 public class MainFrame {
     JFrame frame;
-
     private String username;
     private String myRoomCode;
     private Color cursorColor;
-
     private CardLayout cardLayout;
     private JPanel mainPanel;
-
     private JTextField usernameField;
     private JTextField serverIPField;
     private JTextField joinRoomCodeField;
     private JLabel lobbyUsernameLabel;
-
     private JLabel roomCodeLabel;
-
     private DrawingCanvas canvas;
     private ClientNetworkManager networkManager;
     private DefaultListModel<String> memberModel;
     private DefaultListModel<String> itemListModel;
-
     private static final Dimension LOGIN_SIZE = new Dimension(300, 280);
     private static final Dimension LOBBY_SIZE = new Dimension(400, 320);
-
     public static class AppTheme {
         public Color background = new Color(45, 52, 80);
         public Color inputBg = new Color(30, 30, 50);
@@ -43,43 +33,34 @@ public class MainFrame {
         public Color titleText = Color.WHITE;
         public Color hintText = Color.LIGHT_GRAY;
     }
-
     public AppTheme theme = new AppTheme();
-
     public MainFrame() {
         init();
     }
-
     private void init() {
         frame = new JFrame("DEHSETÜL VAHŞET PAİNT");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
         this.cursorColor = new Color(
                 (int) (Math.random() * 256),
                 (int) (Math.random() * 256),
                 (int) (Math.random() * 256));
-
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
         mainPanel.add(loginPanel(), "LOGIN");
         mainPanel.add(lobbyPanel(), "LOBBY");
         mainPanel.add(canvasPanel(), "CANVAS");
-
         frame.getContentPane().add(mainPanel);
         goLogin();
         frame.setVisible(true);
     }
-
     private void goLogin() {
         cardLayout.show(mainPanel, "LOGIN");
         resizeFrame(LOGIN_SIZE, false);
     }
-
     private void goLobby() {
         cardLayout.show(mainPanel, "LOBBY");
         resizeFrame(LOBBY_SIZE, false);
     }
-
     private void goCanvas() {
         roomCodeLabel.setText("Oda Kodu: " + myRoomCode);
         canvas.setUsername(username);
@@ -87,7 +68,6 @@ public class MainFrame {
         cardLayout.show(mainPanel, "CANVAS");
         resizeFrame(null, true);
     }
-
     private void resizeFrame(Dimension size, boolean maximize) {
         if (maximize) {
             frame.setResizable(true);
@@ -100,7 +80,6 @@ public class MainFrame {
             frame.setLocationRelativeTo(null);
         }
     }
-
     private JToggleButton makeToolButton(String label, String tooltip) {
         JToggleButton btn = new JToggleButton(label) {
             @Override
@@ -128,46 +107,36 @@ public class MainFrame {
         btn.setContentAreaFilled(false);
         return btn;
     }
-
     private JPanel loginPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(theme.background);
-
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
-
         JLabel title = new JLabel("PaiCollab", SwingConstants.CENTER);
         title.setFont(new Font("Arial", Font.BOLD, 32));
         title.setForeground(theme.titleText);
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         panel.add(title, gbc);
-
         CustomButton.addInputFieldAsForm(panel, 2, gbc, "Localhost:",
                 serverIPField = new JTextField("localhost"), theme);
         CustomButton.addInputFieldAsForm(panel, 3, gbc, "Username:",
                 usernameField = new JTextField(), theme);
-
         JButton loginBtn = new CustomButton("Login", theme);
         loginBtn.setForeground(theme.titleText);
         gbc.gridy = 4;
         gbc.gridwidth = 2;
         panel.add(loginBtn, gbc);
-
         loginBtn.addActionListener(e -> {
             this.username = usernameField.getText();
             String serverIP = serverIPField.getText();
-
-            // Sunucuya bağlan (NetworkProtocol tabanlı)
             try {
                 this.networkManager = new ClientNetworkManager(serverIP, 12345, username, canvas);
-
                 networkManager.setOnRoomJoined(code -> {
                     this.myRoomCode = code;
                     goCanvas();
                 });
-
                 networkManager.setOnUserListUpdated(users -> {
                     if (memberModel != null) {
                         memberModel.clear();
@@ -176,38 +145,30 @@ public class MainFrame {
                         }
                     }
                 });
-
                 networkManager.setOnError(msg -> {
                     JOptionPane.showMessageDialog(frame, "Sunucu Hatası: " + msg);
                 });
-
                 setupNetworkHooks();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Bağlantı hatası: " + ex.getMessage());
                 return;
             }
-
             lobbyUsernameLabel.setText("Merhaba, Ressam(!) " + this.username);
             goLobby();
         });
         usernameField.addActionListener(e -> loginBtn.doClick());
-
         return panel;
     }
-
     private JPanel lobbyPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 16));
         panel.setBackground(theme.background);
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
         lobbyUsernameLabel = new JLabel("Merhaba, Ressam(!) " + this.username, SwingConstants.CENTER);
         lobbyUsernameLabel.setFont(new Font("Arial", Font.BOLD, 20));
         lobbyUsernameLabel.setForeground(theme.titleText);
         panel.add(lobbyUsernameLabel, BorderLayout.NORTH);
-
         JPanel center = new JPanel(new GridLayout(4, 1, 0, 8));
         center.setOpaque(false);
-
         JButton createRoomBtn = new CustomButton("Oda Oluştur", theme);
         createRoomBtn.addActionListener(e -> {
             if (networkManager != null) {
@@ -215,7 +176,6 @@ public class MainFrame {
             }
         });
         center.add(createRoomBtn);
-
         JPanel joinRow = new JPanel(new BorderLayout(8, 0));
         joinRow.setOpaque(false);
         joinRoomCodeField = new JTextField();
@@ -235,28 +195,22 @@ public class MainFrame {
         });
         joinRoomCodeField.addActionListener(e -> joinRoomBtn.doClick());
         center.add(joinRow);
-
         JButton settingsBtn = new CustomButton("Ayarlar", theme);
         settingsBtn.addActionListener(e -> openSettingsDialog());
         center.add(settingsBtn);
-
         JLabel hint = new JLabel("Oda kodunu bilmiyorsanız yeni bir oda oluşturun.", SwingConstants.CENTER);
         hint.setFont(new Font("Arial", Font.ITALIC, 11));
         hint.setForeground(theme.hintText);
         center.add(hint);
-
         panel.add(center, BorderLayout.CENTER);
         return panel;
     }
-
     private JPanel canvasPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(theme.background);
-
         canvas = new DrawingCanvas();
         canvas.setBackground(Color.WHITE);
         canvas.setPreferredSize(new Dimension(1200, 800));
-
         canvas.setOnItemsChanged(() -> {
             if (itemListModel != null) {
                 itemListModel.clear();
@@ -265,25 +219,20 @@ public class MainFrame {
                     descs.forEach(itemListModel::addElement);
             }
         });
-
         JScrollPane canvasScroll = new JScrollPane(canvas);
         canvasScroll.setBorder(null);
         canvasScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         canvasScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-
         panel.add(createTopBarPanel(), BorderLayout.NORTH);
         panel.add(canvasScroll, BorderLayout.CENTER);
         panel.add(buildSidebar(), BorderLayout.EAST);
-
         return panel;
     }
-
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout());
         sidebar.setBackground(new Color(24, 24, 36));
         sidebar.setPreferredSize(new Dimension(230, 0));
         sidebar.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(60, 60, 80)));
-
         memberModel = new DefaultListModel<>();
         JList<String> memberList = new JList<>(memberModel);
         memberList.setBackground(new Color(30, 30, 48));
@@ -293,12 +242,10 @@ public class MainFrame {
         JScrollPane memberScroll = new JScrollPane(memberList);
         memberScroll.setBorder(null);
         memberScroll.setPreferredSize(new Dimension(230, 110));
-
         JPanel membersBox = new JPanel(new BorderLayout());
         membersBox.setOpaque(false);
         membersBox.add(sectionTitle("Uyeler"), BorderLayout.NORTH);
         membersBox.add(memberScroll, BorderLayout.CENTER);
-
         itemListModel = new DefaultListModel<>();
         JList<String> itemList = new JList<>(itemListModel);
         itemList.setBackground(new Color(20, 20, 35));
@@ -314,29 +261,24 @@ public class MainFrame {
         });
         JScrollPane itemScroll = new JScrollPane(itemList);
         itemScroll.setBorder(null);
-
         JPanel itemsBox = new JPanel(new BorderLayout());
         itemsBox.setOpaque(false);
         itemsBox.add(sectionTitle("Oge Listesi"), BorderLayout.NORTH);
         itemsBox.add(itemScroll, BorderLayout.CENTER);
-
         JLabel hint = new JLabel(
                 "<html><center>Sec araciyla tikla,<br>Delete ile sil</center></html>",
                 SwingConstants.CENTER);
         hint.setForeground(new Color(120, 120, 160));
         hint.setFont(new Font("SansSerif", Font.ITALIC, 10));
         hint.setBorder(new EmptyBorder(6, 4, 6, 4));
-
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
         top.add(membersBox, BorderLayout.NORTH);
         top.add(hint, BorderLayout.SOUTH);
-
         sidebar.add(top, BorderLayout.NORTH);
         sidebar.add(itemsBox, BorderLayout.CENTER);
         return sidebar;
     }
-
     private JLabel sectionTitle(String text) {
         JLabel lbl = new JLabel(text);
         lbl.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -348,14 +290,11 @@ public class MainFrame {
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         return lbl;
     }
-
     private JPanel createTopBarPanel() {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setBackground(theme.background);
         topBar.setBorder(new EmptyBorder(6, 10, 6, 10));
         topBar.setPreferredSize(new Dimension(0, 50));
-
-        // SOL
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         left.setOpaque(false);
         roomCodeLabel = new JLabel("Oda Kodu: " + myRoomCode);
@@ -372,19 +311,17 @@ public class MainFrame {
         left.add(roomCodeLabel);
         left.add(copyBtn);
         topBar.add(left, BorderLayout.WEST);
-
-        // ORTA
         JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0));
         center.setOpaque(false);
-
         String[][] tools = {
                 { "S", "Seç & Kes", "SELECT" },
                 { "K", "Kalem", "FREEHAND" },
                 { "R", "Dikdörtgen", "RECTANGLE" },
                 { "E", "Elips", "CIRCLE" },
                 { "C", "Çizgi", "LINE" },
+                { "T", "Üçgen", "TRIANGLE" },
+                { "X", "Silgi", "ERASER" }
         };
-
         ButtonGroup toolGroup = new ButtonGroup();
         for (String[] t : tools) {
             JToggleButton btn = makeToolButton(t[0], t[1]);
@@ -397,12 +334,10 @@ public class MainFrame {
                 btn.setSelected(true);
             center.add(btn);
         }
-
         JLabel colorLabel = new JLabel("Renk:");
         colorLabel.setFont(new Font("Arial", Font.PLAIN, 11));
         colorLabel.setForeground(theme.titleText);
         center.add(colorLabel);
-
         JButton colorBtn = CustomButton.smallButtonGenerate("■", theme);
         colorBtn.setPreferredSize(new Dimension(26, 28));
         colorBtn.setBackground(theme.buttonColor);
@@ -414,12 +349,10 @@ public class MainFrame {
             }
         });
         center.add(colorBtn);
-
         JLabel strokeLbl = new JLabel("Kalınlık:");
         strokeLbl.setFont(new Font("Arial", Font.PLAIN, 11));
         strokeLbl.setForeground(theme.titleText);
         center.add(strokeLbl);
-
         JSpinner strokeSpinner = new JSpinner(new SpinnerNumberModel(2, 1, 20, 1));
         strokeSpinner.setPreferredSize(new Dimension(42, 28));
         strokeSpinner.getEditor().getComponent(0).setBackground(theme.buttonColor);
@@ -428,7 +361,6 @@ public class MainFrame {
             canvas.setStrokeWidth((int) strokeSpinner.getValue());
         });
         center.add(strokeSpinner);
-
         JToggleButton fillBtn = new JToggleButton("Dolu") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -453,20 +385,15 @@ public class MainFrame {
         fillBtn.setContentAreaFilled(false);
         fillBtn.addActionListener(e -> canvas.setFilled(fillBtn.isSelected()));
         center.add(fillBtn);
-
         JButton pasteBtn = CustomButton.smallButtonGenerate("Yapistir", theme);
         pasteBtn.setToolTipText("Resim yapistir (Ctrl+V)");
         pasteBtn.addActionListener(e -> {
             canvas.pasteFromClipboard();
         });
         center.add(pasteBtn);
-
         topBar.add(center, BorderLayout.CENTER);
-
-        // SAĞ
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         right.setOpaque(false);
-
         JButton clearBtn = CustomButton.smallButtonGenerate("Temizle", theme);
         clearBtn.addActionListener(e -> {
             if (networkManager != null) {
@@ -474,25 +401,23 @@ public class MainFrame {
             }
             canvas.clearCanvas();
         });
-
         JButton leaveBtn = CustomButton.smallButtonGenerate("Ayrıl", theme);
         leaveBtn.addActionListener(e -> {
             if (networkManager != null) {
                 networkManager.leaveRoom();
             }
-            if (memberModel != null) memberModel.clear();
-            if (itemListModel != null) itemListModel.clear();
+            if (memberModel != null)
+                memberModel.clear();
+            if (itemListModel != null)
+                itemListModel.clear();
             canvas.clearCanvas();
             goLobby();
         });
-
         right.add(clearBtn);
         right.add(leaveBtn);
         topBar.add(right, BorderLayout.EAST);
-
         return topBar;
     }
-
     private void applyInputFieldStyle(JTextField field) {
         field.setFont(new Font("Arial", Font.PLAIN, 14));
         field.setBackground(theme.inputBg);
@@ -502,17 +427,14 @@ public class MainFrame {
                 BorderFactory.createLineBorder(theme.inputBorder),
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)));
     }
-
     private void openSettingsDialog() {
         JDialog dialog = new JDialog(frame, "Ayarlar", true);
         dialog.setLayout(new GridBagLayout());
         dialog.getContentPane().setBackground(theme.background);
         dialog.setResizable(false);
-
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 12, 8, 12);
         gbc.fill = GridBagConstraints.HORIZONTAL;
-
         AppTheme temp = new AppTheme();
         temp.background = theme.background;
         temp.inputBg = theme.inputBg;
@@ -521,19 +443,16 @@ public class MainFrame {
         temp.subText = theme.subText;
         temp.titleText = theme.titleText;
         temp.hintText = theme.hintText;
-
         String[] labels = {
                 "Arka Plan", "Girdi Arka Planı", "Girdi Kenarlık",
                 "Buton Rengi", "Alt Metin", "Başlık Metni", "İpucu Metni"
         };
-
         JButton[] colorBtns = new JButton[labels.length];
         for (int i = 0; i < labels.length; i++) {
             final int idx = i;
             JLabel lbl = new JLabel(labels[i]);
             lbl.setForeground(theme.titleText);
             lbl.setFont(new Font("Arial", Font.PLAIN, 13));
-
             colorBtns[i] = new JButton();
             colorBtns[i].setPreferredSize(new Dimension(60, 26));
             colorBtns[i].setBackground(getThemeColorByIndex(temp, i));
@@ -549,7 +468,6 @@ public class MainFrame {
                     colorBtns[idx].setBackground(secim);
                 }
             });
-
             gbc.gridx = 0;
             gbc.gridy = i;
             gbc.weightx = 0.6;
@@ -558,13 +476,10 @@ public class MainFrame {
             gbc.weightx = 0.4;
             dialog.add(colorBtns[i], gbc);
         }
-
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnRow.setOpaque(false);
-
         JButton applyBtn = new CustomButton("Uygula", theme);
         JButton cancelBtn = new CustomButton("İptal", theme);
-
         applyBtn.addActionListener(e -> {
             theme.background = temp.background;
             theme.inputBg = temp.inputBg;
@@ -576,22 +491,18 @@ public class MainFrame {
             rebuildPanels();
             dialog.dispose();
         });
-
         cancelBtn.addActionListener(e -> dialog.dispose());
         btnRow.add(cancelBtn);
         btnRow.add(applyBtn);
-
         gbc.gridx = 0;
         gbc.gridy = labels.length;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(16, 12, 12, 12);
         dialog.add(btnRow, gbc);
-
         dialog.pack();
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
     }
-
     private void rebuildPanels() {
         mainPanel.removeAll();
         mainPanel.add(loginPanel(), "LOGIN");
@@ -602,7 +513,6 @@ public class MainFrame {
         canvas.setCursorColor(cursorColor);
         goLobby();
     }
-
     private Color getThemeColorByIndex(AppTheme t, int idx) {
         return switch (idx) {
             case 0 -> t.background;
@@ -615,11 +525,9 @@ public class MainFrame {
             default -> Color.GRAY;
         };
     }
-
     private void setupNetworkHooks() {
         if (networkManager == null)
             return;
-
         canvas.setOnShapeDrawn(shape -> networkManager.sendShape(shape));
         canvas.setOnCursorMoved(cp -> networkManager.sendCursor(cp));
         canvas.setOnImagePasted(pi -> {
@@ -634,7 +542,6 @@ public class MainFrame {
             }
         });
     }
-
     private void setThemeColorByIndex(AppTheme t, int idx, Color c) {
         switch (idx) {
             case 0 -> t.background = c;
@@ -646,7 +553,6 @@ public class MainFrame {
             case 6 -> t.hintText = c;
         }
     }
-
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());

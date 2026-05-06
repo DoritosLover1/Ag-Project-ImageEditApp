@@ -1,23 +1,20 @@
 package network;
-
 import models.*;
 import uiframe.DrawingCanvas;
 import java.io.*;
 import java.net.Socket;
 import java.util.function.Consumer;
 import javax.swing.SwingUtilities;
-
+import java.util.*;
 public class ClientNetworkManager {
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
     private String username;
     private DrawingCanvas canvas;
-
     private Consumer<String> onRoomJoined;
-    private Consumer<java.util.List<String>> onUserListUpdated;
+    private Consumer<List<String>> onUserListUpdated;
     private Consumer<String> onError;
-
     public ClientNetworkManager(String host, int port, String username, DrawingCanvas canvas) {
         this.username = username;
         this.canvas = canvas;
@@ -26,9 +23,7 @@ public class ClientNetworkManager {
                 socket = new Socket(host, port);
                 out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
-
                 sendRaw(NetworkProtocol.buildLogin(username));
-
                 String line;
                 while ((line = in.readLine()) != null) {
                     final String msg = line;
@@ -41,24 +36,21 @@ public class ClientNetworkManager {
             }
         }).start();
     }
-
     private void handleMessage(String raw) {
         String[] p = raw.split(NetworkProtocol.SEPARATOR);
         if (p.length < 4)
             return;
-
         String sender = p[2];
         String command = p[3];
-
         if (sender.equals(username) && !command.equals(NetworkProtocol.CMD_CLEAR))
             return;
-
         switch (command) {
             case NetworkProtocol.CMD_SQUARE:
             case NetworkProtocol.CMD_CIRCLE:
             case NetworkProtocol.CMD_LINE:
             case NetworkProtocol.CMD_FREEHAND:
             case NetworkProtocol.CMD_TEXT:
+            case NetworkProtocol.CMD_TRIANGLE:
                 canvas.addShapeSilently(DrawShape.fromNetworkProtocol(p), sender);
                 break;
             case NetworkProtocol.CMD_CURSOR:
@@ -97,40 +89,31 @@ public class ClientNetworkManager {
                 break;
         }
     }
-
     public void createRoom() {
         sendRaw(NetworkProtocol.buildCreateRoom(username));
     }
-
     public void joinRoom(String code) {
         sendRaw(NetworkProtocol.buildJoinRoom(username, code));
     }
-
     public void leaveRoom() {
         sendRaw(NetworkProtocol.buildLeaveRoom(username));
     }
-
     public void sendShape(DrawShape shape) {
         sendRaw(shape.toNetworkString(username));
     }
-
     public void sendCursor(CursorPosition cp) {
         sendRaw(NetworkProtocol.buildCursor(username, cp.getX(), cp.getY(), cp.getColor()));
     }
-
     public void sendRaw(String data) {
         if (out != null)
             out.println(data);
     }
-
     public void setOnRoomJoined(Consumer<String> callback) {
         this.onRoomJoined = callback;
     }
-
     public void setOnUserListUpdated(Consumer<java.util.List<String>> callback) {
         this.onUserListUpdated = callback;
     }
-
     public void setOnError(Consumer<String> callback) {
         this.onError = callback;
     }

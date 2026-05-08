@@ -1,0 +1,18 @@
+# Derlenmiş dosyalar
+bin/
+*.class
+
+# IDE Ayarları
+.settings/
+.classpath
+.project
+.vscode/
+.idea/
+
+# Kullanıcıya özel ayarlar ve veriler
+theme.properties
+saved_canvases/
+
+# Geçici dosyalar
+*.log
+tmp/

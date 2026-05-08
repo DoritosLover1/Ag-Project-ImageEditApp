@@ -1,6 +1,6 @@
 package uiframe;
+
 import models.*;
-import network.NetworkProtocol;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -14,10 +14,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+
 public class DrawingCanvas extends JPanel {
     public enum Tool {
         SELECT, RECTANGLE, CIRCLE, LINE, FREEHAND, TRIANGLE, ERASER
     }
+
     private final List<CanvasItem> items = new CopyOnWriteArrayList<>();
     private final Map<String, CursorPosition> remoteCursors = new HashMap<>();
     private Tool currentTool = Tool.FREEHAND;
@@ -41,6 +43,7 @@ public class DrawingCanvas extends JPanel {
     private static final long CURSOR_THROTTLE_MS = 33;
     private int dashOffset = 0;
     private javax.swing.Timer dashTimer;
+
     public DrawingCanvas() {
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(1200, 800));
@@ -54,6 +57,7 @@ public class DrawingCanvas extends JPanel {
         });
         dashTimer.start();
     }
+
     private void setupMouseListeners() {
         MouseAdapter adapter = new MouseAdapter() {
             @Override
@@ -77,6 +81,7 @@ public class DrawingCanvas extends JPanel {
                 freehandPoints.clear();
                 freehandPoints.add(new Point(startX, startY));
             }
+
             @Override
             public void mouseDragged(MouseEvent e) {
                 currentX = e.getX();
@@ -95,6 +100,7 @@ public class DrawingCanvas extends JPanel {
                 repaint();
                 sendCursorMove(e.getX(), e.getY());
             }
+
             @Override
             public void mouseReleased(MouseEvent e) {
                 currentX = e.getX();
@@ -115,6 +121,7 @@ public class DrawingCanvas extends JPanel {
                 drawing = false;
                 finalizeShape();
             }
+
             @Override
             public void mouseMoved(MouseEvent e) {
                 sendCursorMove(e.getX(), e.getY());
@@ -123,6 +130,7 @@ public class DrawingCanvas extends JPanel {
         addMouseListener(adapter);
         addMouseMotionListener(adapter);
     }
+
     private void applyCut() {
         if (selectionRect == null)
             return;
@@ -149,6 +157,7 @@ public class DrawingCanvas extends JPanel {
             repaint();
         }
     }
+
     private void pasteInternal() {
         if (internalClipboard.isEmpty())
             return;
@@ -189,6 +198,7 @@ public class DrawingCanvas extends JPanel {
         repaint();
         fireItemsChanged();
     }
+
     private CanvasItem cloneItem(CanvasItem item, int offX, int offY) {
         if (item.getItemType() == CanvasItem.ItemType.SHAPE) {
             DrawShape s = item.getShape();
@@ -230,6 +240,7 @@ public class DrawingCanvas extends JPanel {
             return new CanvasItem(n, myNickname);
         }
     }
+
     private void eraseAt(int x, int y) {
         Rectangle eraserArea = new Rectangle(x - 10, y - 10, 20, 20);
         List<String> toDelete = new ArrayList<>();
@@ -245,6 +256,7 @@ public class DrawingCanvas extends JPanel {
                 onItemsCut.accept(toDelete);
         }
     }
+
     public void removeItemsByIds(List<String> ids) {
         Set<String> idSet = new HashSet<>(ids);
         items.removeIf(i -> idSet.contains(i.getIdOfImage()));
@@ -253,10 +265,12 @@ public class DrawingCanvas extends JPanel {
             fireItemsChanged();
         });
     }
+
     private Rectangle makeRect(int x1, int y1, int x2, int y2) {
         return new Rectangle(Math.min(x1, x2), Math.min(y1, y2),
                 Math.abs(x2 - x1), Math.abs(y2 - y1));
     }
+
     private Rectangle getBounds(CanvasItem item) {
         if (item.getItemType() == CanvasItem.ItemType.IMAGE) {
             PastedImage pi = item.getImage();
@@ -300,6 +314,7 @@ public class DrawingCanvas extends JPanel {
                 return null;
         }
     }
+
     private void sendCursorMove(int x, int y) {
         long now = System.currentTimeMillis();
         if (now - lastCursorSend < CURSOR_THROTTLE_MS)
@@ -308,6 +323,7 @@ public class DrawingCanvas extends JPanel {
         if (onCursorMoved != null && myNickname != null)
             onCursorMoved.accept(new CursorPosition(x, y, myNickname, myCursorColor));
     }
+
     private void finalizeShape() {
         DrawShape shape = buildShape();
         if (shape == null)
@@ -319,6 +335,7 @@ public class DrawingCanvas extends JPanel {
         if (onShapeDrawn != null)
             onShapeDrawn.accept(shape);
     }
+
     private DrawShape buildShape() {
         DrawShape s = new DrawShape();
         s.setColorOfShape(colorToHex(currentColor));
@@ -361,15 +378,13 @@ public class DrawingCanvas extends JPanel {
                     return null;
                 s.setShapeType(DrawShape.ShapeType.TRIANGLE);
                 int tx = Math.min(startX, currentX);
-                int ty = Math.min(startY, currentY);
                 int tw = Math.abs(currentX - startX);
-                int th = Math.abs(currentY - startY);
                 s.setXOfShape(tx);
-                s.setYOfShape(ty);
+                s.setYOfShape(startY);
                 s.setX2OfShape(tx + tw);
-                s.setY2OfShape(ty);
+                s.setY2OfShape(startY);
                 s.setX3OfShape(tx + tw / 2);
-                s.setY3OfShape(ty + th);
+                s.setY3OfShape(currentY);
                 return s;
             case FREEHAND:
                 if (freehandPoints.size() < 2)
@@ -384,6 +399,7 @@ public class DrawingCanvas extends JPanel {
                 return null;
         }
     }
+
     private void setupKeyBindings() {
         setFocusable(true);
         getInputMap(WHEN_IN_FOCUSED_WINDOW).put(
@@ -404,6 +420,7 @@ public class DrawingCanvas extends JPanel {
             }
         });
     }
+
     public void pasteFromClipboard() {
         if (!internalClipboard.isEmpty()) {
             pasteInternal();
@@ -440,6 +457,7 @@ public class DrawingCanvas extends JPanel {
             System.err.println("Paste error: " + ex.getMessage());
         }
     }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -481,6 +499,7 @@ public class DrawingCanvas extends JPanel {
                 drawRemoteCursor(g2, cp);
         }
     }
+
     private void drawShape(Graphics2D g2, DrawShape s) {
         if (s == null)
             return;
@@ -516,14 +535,9 @@ public class DrawingCanvas extends JPanel {
                 if (xs != null && xs.length > 1)
                     g2.drawPolyline(xs, ys, xs.length);
                 break;
-            case TEXT:
-                if (s.getTextOfShape() != null) {
-                    g2.setFont(new Font("SansSerif", Font.PLAIN, 16));
-                    g2.drawString(s.getTextOfShape(), s.getXOfShape(), s.getYOfShape());
-                }
-                break;
         }
     }
+
     private void drawImage(Graphics2D g2, PastedImage pi) {
         if (pi == null || pi.getImageData() == null)
             return;
@@ -536,6 +550,7 @@ public class DrawingCanvas extends JPanel {
             System.err.println("Image draw error: " + e.getMessage());
         }
     }
+
     private void drawPreview(Graphics2D g2) {
         int x = Math.min(startX, currentX), y = Math.min(startY, currentY);
         int w = Math.abs(currentX - startX), h = Math.abs(currentY - startY);
@@ -555,7 +570,7 @@ public class DrawingCanvas extends JPanel {
                 break;
             case TRIANGLE:
                 int[] xPoints = { x, x + w, x + w / 2 };
-                int[] yPoints = { y, y, y + h };
+                int[] yPoints = { startY, startY, currentY };
                 if (filled)
                     g2.fillPolygon(xPoints, yPoints, 3);
                 else
@@ -566,6 +581,7 @@ public class DrawingCanvas extends JPanel {
                 break;
         }
     }
+
     private void drawRemoteCursor(Graphics2D g2, CursorPosition cp) {
         Color c = hexToColor(cp.getColor());
         int[] cx = { cp.getX(), cp.getX() + 10, cp.getX() + 4 };
@@ -582,6 +598,7 @@ public class DrawingCanvas extends JPanel {
         g2.setColor(Color.WHITE);
         g2.drawString(cp.getUsername(), cp.getX() + 16, cp.getY() + 14);
     }
+
     public void addRemoteShape(DrawShape shape, String sender) {
         items.add(new CanvasItem(shape, sender));
         SwingUtilities.invokeLater(() -> {
@@ -589,6 +606,7 @@ public class DrawingCanvas extends JPanel {
             fireItemsChanged();
         });
     }
+
     public void addRemoteImage(PastedImage image, String sender) {
         items.add(new CanvasItem(image, sender));
         SwingUtilities.invokeLater(() -> {
@@ -596,6 +614,7 @@ public class DrawingCanvas extends JPanel {
             fireItemsChanged();
         });
     }
+
     public void removeItemById(String id) {
         items.removeIf(i -> id.equals(i.getIdOfImage()));
         SwingUtilities.invokeLater(() -> {
@@ -603,18 +622,21 @@ public class DrawingCanvas extends JPanel {
             fireItemsChanged();
         });
     }
+
     public void updateRemoteCursor(CursorPosition cp) {
         synchronized (remoteCursors) {
             remoteCursors.put(cp.getUsername(), cp);
         }
         SwingUtilities.invokeLater(this::repaint);
     }
+
     public void removeRemoteCursor(String nickname) {
         synchronized (remoteCursors) {
             remoteCursors.remove(nickname);
         }
         SwingUtilities.invokeLater(this::repaint);
     }
+
     public void loadCanvasState(List<CanvasItem> snapshot) {
         items.clear();
         items.addAll(snapshot);
@@ -624,6 +646,7 @@ public class DrawingCanvas extends JPanel {
             fireItemsChanged();
         });
     }
+
     public void clearCanvas() {
         items.clear();
         selectionRect = null;
@@ -632,13 +655,16 @@ public class DrawingCanvas extends JPanel {
             fireItemsChanged();
         });
     }
+
     public List<CanvasItem> getItemsSnapshot() {
         return new ArrayList<>(items);
     }
+
     private void fireItemsChanged() {
         if (onItemsChanged != null)
             onItemsChanged.run();
     }
+
     public void setCurrentTool(Tool tool) {
         this.currentTool = tool;
         if (tool == Tool.SELECT) {
@@ -649,43 +675,56 @@ public class DrawingCanvas extends JPanel {
             setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
         }
     }
+
     public void setCurrentColor(Color color) {
         this.currentColor = color;
     }
+
     public Color getCurrentColor() {
         return currentColor;
     }
+
     public void setStrokeWidth(int w) {
         this.strokeWidth = w;
     }
+
     public void setFilled(boolean f) {
         this.filled = f;
     }
+
     public void setUsername(String n) {
         this.myNickname = n;
     }
+
     public void setCursorColor(Color cursorColor) {
         this.myCursorColor = String.format("#%02X%02X%02X",
                 cursorColor.getRed(), cursorColor.getGreen(), cursorColor.getBlue());
     }
+
     public void setOnShapeDrawn(Consumer<DrawShape> cb) {
         this.onShapeDrawn = cb;
     }
+
     public void setOnImagePasted(Consumer<PastedImage> cb) {
         this.onImagePasted = cb;
     }
+
     public void setOnCursorMoved(Consumer<CursorPosition> cb) {
         this.onCursorMoved = cb;
     }
+
     public void setOnItemsCut(Consumer<List<String>> cb) {
         this.onItemsCut = cb;
     }
+
     public void setOnItemsChanged(Runnable cb) {
         this.onItemsChanged = cb;
     }
+
     private static String colorToHex(Color c) {
         return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
     }
+
     private static Color hexToColor(String hex) {
         if (hex == null)
             return Color.BLACK;
@@ -695,6 +734,7 @@ public class DrawingCanvas extends JPanel {
             return Color.BLACK;
         }
     }
+
     private static BufferedImage toBufferedImage(Image img) {
         if (img instanceof BufferedImage)
             return (BufferedImage) img;
@@ -705,6 +745,7 @@ public class DrawingCanvas extends JPanel {
         g2.dispose();
         return bi;
     }
+
     public List<String> getItemDescriptions() {
         List<String> result = new ArrayList<>();
         for (CanvasItem item : items) {
@@ -712,11 +753,13 @@ public class DrawingCanvas extends JPanel {
         }
         return result;
     }
+
     private static byte[] toBytes(BufferedImage img) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ImageIO.write(img, "PNG", bos);
         return bos.toByteArray();
     }
+
     public void addShapeSilently(DrawShape shape, String sender) {
         items.add(new CanvasItem(shape, sender));
         SwingUtilities.invokeLater(this::repaint);

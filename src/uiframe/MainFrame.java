@@ -14,6 +14,7 @@ public class MainFrame {
     private String myRoomCode;
     private Color cursorColor;
     private CardLayout cardLayout;
+    private String currentScreen = "LOGIN";
     private JPanel mainPanel;
     private JTextField usernameField;
     private JTextField serverIPField;
@@ -39,8 +40,10 @@ public class MainFrame {
     }
 
     public AppTheme theme = new AppTheme();
+    private static final String SETTINGS_FILE = "theme.properties";
 
     public MainFrame() {
+        loadTheme();
         init();
     }
 
@@ -62,16 +65,19 @@ public class MainFrame {
     }
 
     private void goLogin() {
+        currentScreen = "LOGIN";
         cardLayout.show(mainPanel, "LOGIN");
         resizeFrame(LOGIN_SIZE, false);
     }
 
     private void goLobby() {
+        currentScreen = "LOBBY";
         cardLayout.show(mainPanel, "LOBBY");
         resizeFrame(LOBBY_SIZE, false);
     }
 
     private void goCanvas() {
+        currentScreen = "CANVAS";
         roomCodeLabel.setText("Oda Kodu: " + myRoomCode);
         canvas.setUsername(username);
         canvas.setCursorColor(cursorColor);
@@ -108,7 +114,7 @@ public class MainFrame {
                 g2.setColor(sel ? Color.WHITE : new Color(80, 120, 170));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
                 g2.setColor(sel ? new Color(20, 20, 60) : Color.WHITE);
-                g2.setFont(new Font("Arial", Font.BOLD, 13));
+                g2.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 15));
                 FontMetrics fm = g2.getFontMetrics();
                 int tx = (getWidth() - fm.stringWidth(getText())) / 2;
                 int ty = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
@@ -158,7 +164,11 @@ public class MainFrame {
                     if (memberModel != null) {
                         memberModel.clear();
                         for (String u : users) {
-                            memberModel.addElement(u);
+                            if (!u.equals(username)) {
+                                memberModel.addElement(u);
+                            } else {
+                                memberModel.addElement(u + " (Siz)");
+                            }
                         }
                     }
                 });
@@ -268,6 +278,24 @@ public class MainFrame {
         membersBox.add(memberScroll, BorderLayout.CENTER);
         itemListModel = new DefaultListModel<>();
         JList<String> itemList = new JList<>(itemListModel);
+        itemList.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_DELETE) {
+                    int index = itemList.getSelectedIndex();
+                    if (index != -1) {
+                        java.util.List<models.CanvasItem> snap = canvas.getItemsSnapshot();
+                        if (index < snap.size()) {
+                            String id = snap.get(index).getIdOfImage();
+                            if (networkManager != null) {
+                                networkManager.sendRaw(network.NetworkProtocol.buildDelete(username, id));
+                            }
+                            canvas.removeItemById(id);
+                        }
+                    }
+                }
+            }
+        });
         itemList.setBackground(new Color(20, 20, 35));
         itemList.setForeground(new Color(200, 220, 200));
         itemList.setFont(new Font("SansSerif", Font.PLAIN, 11));
@@ -336,13 +364,13 @@ public class MainFrame {
         JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 3, 0));
         center.setOpaque(false);
         String[][] tools = {
-                { "[ ]", "Seç & Kes", "SELECT" },
-                { "~", "Kalem", "FREEHAND" },
-                { "[]", "Dikdörtgen", "RECTANGLE" },
-                { "()", "Elips", "CIRCLE" },
-                { "/", "Çizgi", "LINE" },
-                { "^", "Üçgen", "TRIANGLE" },
-                { "X", "Silgi", "ERASER" }
+                { "\uD83C\uDFAF", "Seç & Kes", "SELECT" },
+                { "\u270E", "Kalem", "FREEHAND" },
+                { "\uD83D\uDFE6", "Dikdörtgen", "RECTANGLE" },
+                { "\u2B55", "Elips", "CIRCLE" },
+                { "\u2796", "Çizgi", "LINE" },
+                { "\uD83D\uDD3A", "Üçgen", "TRIANGLE" },
+                { "\uD83E\uDDFC", "Silgi", "ERASER" }
         };
         ButtonGroup toolGroup = new ButtonGroup();
         for (String[] t : tools) {
@@ -423,6 +451,8 @@ public class MainFrame {
             }
             canvas.clearCanvas();
         });
+        JButton settingsBtn = CustomButton.smallButtonGenerate("Ayarlar", theme);
+        settingsBtn.addActionListener(e -> openSettingsDialog());
         JButton leaveBtn = CustomButton.smallButtonGenerate("Ayrıl", theme);
         leaveBtn.addActionListener(e -> {
             if (networkManager != null) {
@@ -435,6 +465,7 @@ public class MainFrame {
             canvas.clearCanvas();
             goLobby();
         });
+        right.add(settingsBtn);
         right.add(clearBtn);
         right.add(leaveBtn);
         topBar.add(right, BorderLayout.EAST);
@@ -512,6 +543,7 @@ public class MainFrame {
             theme.subText = temp.subText;
             theme.titleText = temp.titleText;
             theme.hintText = temp.hintText;
+            saveTheme();
             rebuildPanels();
             dialog.dispose();
         });
@@ -529,14 +561,26 @@ public class MainFrame {
     }
 
     private void rebuildPanels() {
+        java.util.List<CanvasItem> snap = (canvas != null && currentScreen.equals("CANVAS")) ? canvas.getItemsSnapshot()
+                : null;
+
         mainPanel.removeAll();
         mainPanel.add(loginPanel(), "LOGIN");
         mainPanel.add(lobbyPanel(), "LOBBY");
         mainPanel.add(canvasPanel(), "CANVAS");
+
         if (username != null)
             canvas.setUsername(username);
         canvas.setCursorColor(cursorColor);
-        goLobby();
+
+        if (snap != null) {
+            canvas.loadCanvasState(snap);
+            setupNetworkHooks();
+        }
+
+        cardLayout.show(mainPanel, currentScreen);
+        frame.revalidate();
+        frame.repaint();
     }
 
     private Color getThemeColorByIndex(AppTheme t, int idx) {
@@ -579,6 +623,53 @@ public class MainFrame {
             case 4 -> t.subText = c;
             case 5 -> t.titleText = c;
             case 6 -> t.hintText = c;
+        }
+    }
+
+    private void saveTheme() {
+        java.util.Properties props = new java.util.Properties();
+        props.setProperty("background", colorToHex(theme.background));
+        props.setProperty("inputBg", colorToHex(theme.inputBg));
+        props.setProperty("inputBorder", colorToHex(theme.inputBorder));
+        props.setProperty("buttonColor", colorToHex(theme.buttonColor));
+        props.setProperty("subText", colorToHex(theme.subText));
+        props.setProperty("titleText", colorToHex(theme.titleText));
+        props.setProperty("hintText", colorToHex(theme.hintText));
+
+        try (java.io.FileOutputStream out = new java.io.FileOutputStream(SETTINGS_FILE)) {
+            props.store(out, "Theme Settings");
+        } catch (java.io.IOException e) {
+            System.err.println("Tema kaydedilemedi: " + e.getMessage());
+        }
+    }
+
+    private void loadTheme() {
+        java.util.Properties props = new java.util.Properties();
+        try (java.io.FileInputStream in = new java.io.FileInputStream(SETTINGS_FILE)) {
+            props.load(in);
+            theme.background = hexToColor(props.getProperty("background"));
+            theme.inputBg = hexToColor(props.getProperty("inputBg"));
+            theme.inputBorder = hexToColor(props.getProperty("inputBorder"));
+            theme.buttonColor = hexToColor(props.getProperty("buttonColor"));
+            theme.subText = hexToColor(props.getProperty("subText"));
+            theme.titleText = hexToColor(props.getProperty("titleText"));
+            theme.hintText = hexToColor(props.getProperty("hintText"));
+        } catch (java.io.IOException e) {
+            // Dosya yoksa veya okunamazsa varsayılanlarla devam et
+        }
+    }
+
+    private static String colorToHex(Color c) {
+        return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
+    }
+
+    private static Color hexToColor(String hex) {
+        if (hex == null)
+            return Color.BLACK;
+        try {
+            return Color.decode(hex);
+        } catch (Exception e) {
+            return Color.BLACK;
         }
     }
 

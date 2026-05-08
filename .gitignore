@@ -16,3 +16,6 @@ saved_canvases/
 # Geçici dosyalar
 *.log
 tmp/
+
+# Diğer
+.DS_Store

@@ -1,100 +1,76 @@
-# RFC 001: PaiCollab Messaging Protocol (PCMP)
+# RFC 001: PaiCollab Messaging Protocol (PCMP) - Teknik Uygulama Rehberi
 
-**Status:** Final  
-**Version:** 1.3  
-**Transport:** TCP/IP  
-**Encoding:** UTF-8  
+Bu bölüm, `ClientNetworkManager` işlevselliğini sıfırdan kodlamak isteyen geliştiriciler için metodolojik bir referanstır.
 
 ---
 
-## 1. Introduction
-The PaiCollab Messaging Protocol (PCMP) is a lightweight, text-based, pipe-delimited protocol designed for real-time collaborative drawing applications. It is language-agnostic, allowing clients written in different languages (Java, Python, C++, etc.) to interact seamlessly.
+## 1. Mesajlaşma Temelleri
 
-## 2. Transport and Framing
-- **Protocol:** TCP
-- **Default Port:** 12345
-- **Message Boundary:** Each message MUST end with a newline character (`\n`).
-- **Character Set:** UTF-8
+Tüm iletişim tek satırlık `UTF-8` metinleridir. Sunucu her mesajı `\n` karakteri ile sonlandırılmış olarak bekler ve gönderir.
 
-## 3. Message Structure
-All messages follow a strict pipe-delimited format:
-`MESSAGE_ID | TIMESTAMP | SENDER | COMMAND | [DATA_FIELDS...]`
-
-- **MESSAGE_ID**: A unique 8-character identifier for the message (e.g., UUID snippet).
-- **TIMESTAMP**: Unix timestamp in milliseconds.
-- **SENDER**: The nickname of the user or `SERVER`.
-- **COMMAND**: A case-sensitive string identifying the action.
-- **DATA_FIELDS**: Zero or more fields specific to the command, separated by `|`.
-
-## 4. Connection Lifecycle
-1. **Handshake:** Client connects via TCP and sends a `LOGIN` command.
-2. **Session:** Client can create or join rooms.
-3. **State Sync:** Upon joining a room, the server sends all existing canvas objects.
-4. **Termination:** Client sends `LEAVE_ROOM` or closes the connection.
+### 1.1. Mesaj Alanları
+`ID | TIMESTAMP | SENDER | COMMAND | DATA_FIELDS...`
+- `SENDER`: Mesajı başlatan istemcinin adıdır. Sunucu mesajlarında her zaman `SERVER` olur.
+- `COMMAND`: Uygulama mantığını belirleyen anahtardır.
 
 ---
 
-## 5. Command Reference
+## 2. Metot ve Mesaj Eşleşmeleri (Client -> Server)
 
-### 5.1. Session Management
+Aşağıdaki tablo, istemci tarafındaki fonksiyonların sunucuya ne gönderdiğini açıklar:
 
-| Command | Direction | Data Format | Description |
-| :--- | :--- | :--- | :--- |
-| `LOGIN` | C -> S | `Nickname` | Requests to register a nickname on the server. |
-| `CREATE_ROOM` | C -> S | `NEW` | Requests creation of a new drawing room. |
-| `JOIN_ROOM` | C -> S | `RoomCode` | Requests to join an existing room via 4-digit code. |
-| `LEAVE_ROOM` | C -> S | `LEAVE` | Notifies server the client is leaving the current room. |
-| `ROOM_INFO` | S -> C | `RoomCode` | Confirmation of room entry/creation. |
-| `USER_LIST` | S -> C | `User1,User2,...` | List of all active users in the current room. |
-| `ERROR` | S -> C | `ErrorMessage` | Informs client of a failure (e.g., "Nickname taken"). |
-| `NEW_USERNAME` | C -> S | `OldNick\|NewNick` | Requests to change nickname. |
-| `NAME_CHANGED` | S -> C | `NewNickname` | Confirmation of successful name change. |
-| `LOGIN_SUCCESS` | S -> C | `Nickname` | Confirmation of successful login. |
-
-### 5.2. Drawing Commands
-
-Data fields for shapes follow specific patterns. Colors are Hex strings (e.g., `#FF0000`).
-
-| Command | Data Format | Description |
+| İstemci Fonksiyonu | Gönderilen Mesaj (Format) | Beklenen Sunucu Tepkisi |
 | :--- | :--- | :--- |
-| `SQUARE` | `X|Y|W|H|Color|Stroke|Filled|ID` | Draws a rectangle at (X,Y). |
-| `CIRCLE` | `X|Y|W|H|Color|Stroke|Filled|ID` | Draws an ellipse inside the bounds. |
-| `TRIANGLE` | `X1|Y1|X2|Y2|X3|Y3|Color|Stroke|Filled|ID` | Draws a polygon with 3 vertices. |
-| `LINE` | `X1|Y1|X2|Y2|Color|Stroke|ID` | Draws a line from (X1,Y1) to (X2,Y2). |
-| `FREEHAND` | `Xs|Ys|Color|Stroke|ID` | `Xs/Ys` are comma-separated coordinate lists. |
-| `TEXT` | `X|Y|Content|Color|ID` | Renders text at (X,Y). |
-| `IMAGE` | `X|Y|W|H|Base64|ID` | Renders a Base64 image at (X,Y). |
-| `DELETE` | `TargetID` | Removes specified object (Used by Selection and Eraser). |
-| `CLEAR` | `ALL` | Wipes the entire canvas. |
+| `login(name)` | `...|LOGIN|name` | `LOGIN_SUCCESS` veya `ERROR` |
+| `createRoom()` | `...|CREATE_ROOM|NEW` | `ROOM_INFO` (Yeni Kod) |
+| `joinRoom(code)` | `...|JOIN_ROOM|code` | `ROOM_INFO` + Çizim Geçmişi |
+| `leaveRoom()` | `...|LEAVE_ROOM|LEAVE` | (Sessiz ayrılma, odadakilere `USER_LIST`) |
+| `changeName(new)` | `...|NEW_USERNAME|old|new` | `NAME_CHANGED` |
+| `sendShape(shape)` | `...|SHAPE_TYPE|X|Y|...|ID` | Odadakilere Broadcast |
+| `sendCursor(cp)` | `...|CURSOR|X|Y|Color` | Odadakilere Broadcast (Filtreli*) |
+| `sendClear()` | `...|CLEAR|ALL` | Odadakilere Broadcast |
+| `sendDelete(id)` | `...|DELETE|id` | Odadakilere Broadcast |
 
-### 5.3. Synchronization
-
-| Command | Direction | Data Format | Description |
-| :--- | :--- | :--- | :--- |
-| `CURSOR` | C -> S -> C | `X\|Y\|Color` | Broadcasts user's mouse position to others. |
+*\*Not: Sunucu, CURSOR mesajlarını gönderen hariç herkese iletir.*
 
 ---
 
-## 6. Implementation Notes
+## 3. Sunucudan Gelen Mesajların İşlenmesi (Server -> Client)
 
-### 6.1. Coordinate System
-- Origin `(0,0)` is at the top-left corner of the canvas.
-- All coordinates and dimensions are integers.
+İstemci, sunucudan gelen her mesajı dinlemeli ve `COMMAND` tipine göre şu aksiyonları almalıdır:
 
-### 6.2. Object Persistence
-- The server maintains a list of objects per room.
-- When a new client joins, the server iterates through the room's history and sends individual shape commands (e.g., `SQUARE`, `LINE`) to the new client to reconstruct the canvas state.
+### 3.1. Yönetimsel Mesajlar
+- **`LOGIN_SUCCESS`**: İstemci bu mesajı aldığında "Lobby" ekranına geçiş yapmalıdır.
+- **`ROOM_INFO`**: İstemci bu mesajı aldığında "Canvas" ekranına geçiş yapmalı ve oda kodunu saklamalıdır.
+- **`USER_LIST`**: Veri kısmındaki CSV listesini (`Ali,Veli...`) parçalayarak kullanıcı paneli arayüzünü güncellemelidir.
+- **`ERROR`**: Gelen metni kullanıcıya "Hata" olarak göstermelidir.
 
-### 6.3. Conflict Resolution
-- The protocol relies on "Last Write Wins" for state updates.
-- Unique `ID`s for shapes allow for non-destructive edits and specific deletions across multiple clients.
+### 3.2. Çizim Mesajları (Broadcast)
+İstemci, kendi `SENDER` adı ile eşleşmeyen (başkalarından gelen) şu mesajları alabilir:
+- **`SQUARE`, `CIRCLE`, `LINE` vb.**: Gelen geometrik verileri anında kendi `DrawingCanvas` nesnesine eklemeli ve çizmelidir.
+- **`CURSOR`**: Gelen X, Y ve Renk verisiyle, ilgili kullanıcıya ait "hayalet imleci" (Remote Cursor) güncellemelidir.
+- **`DELETE`**: ID'si belirtilen nesneyi kendi hafızasından ve ekranından silmelidir.
+- **`CLEAR`**: Kendi ekranındaki tüm çizimleri temizlemelidir.
 
 ---
 
-## 7. Example Message
-`a1b2c3d4|1625083200000|Alice|SQUARE|100|150|50|50|#00FF00|2|true|shape_99`
+## 4. Detaylı Parametre Tipleri
 
-- **ID:** `a1b2c3d4`
-- **Time:** `1625083200000`
-- **User:** `Alice`
-- **Action:** Draw a Green Filled Square at (100, 150) with size 50x50 and ID `shape_99`.
+| Komut | Parametre Detayı (DATA_FIELDS) |
+| :--- | :--- |
+| **SQUARE** | `X (int) | Y (int) | W (int) | H (int) | Color (Hex) | Stroke (int) | Filled (bool) | ID (string)` |
+| **FREEHAND** | `X_list (csv) | Y_list (csv) | Color (Hex) | Stroke (int) | ID (string)` |
+| **IMAGE** | `X (int) | Y (int) | W (int) | H (int) | ImageData (Base64) | ID (string)` |
+| **NAME_CHANGED** | `NewNickname (string)` |
+
+---
+
+## 5. Örnek Senaryo: Odaya Katılma ve Çizim
+
+1. **C:** `...|JOIN_ROOM|A1B2` (Odaya girme isteği)
+2. **S:** `...|SERVER|ROOM_INFO|A1B2` (Onay, odaya geç)
+3. **S:** `...|SERVER|SQUARE|...` (Sunucudaki 1. eski nesne)
+4. **S:** `...|SERVER|LINE|...` (Sunucudaki 2. eski nesne)
+5. **S:** `...|SERVER|USER_LIST|Alice,Bob,Mert` (Mevcut kullanıcılar)
+6. **C:** `...|Mert|SQUARE|50|50|...|rect_99` (Mert yeni bir kare çizer)
+7. **S:** (Bu kare mesajını Alice ve Bob'a iletir)

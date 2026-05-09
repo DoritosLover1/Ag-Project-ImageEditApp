@@ -1,34 +1,91 @@
 package server;
+
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.InetSocketAddress;
+import java.nio.channels.*;
+import java.util.Iterator;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 public class CollabServer {
     public static final int TCP_PORT = 12345;
     private final RoomManager roomManager = new RoomManager();
+    private final Queue<ClientHandler> activeClients = new ConcurrentLinkedQueue<>();
+    private Selector selector;
+    private ServerSocketChannel serverChannel;
     private volatile boolean running = true;
+
     public void start() throws IOException {
+        selector = Selector.open();
+        serverChannel = ServerSocketChannel.open();
+        serverChannel.bind(new InetSocketAddress(TCP_PORT));
+        serverChannel.configureBlocking(false);
+        serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+
         System.out.println("╔══════════════════════════════╗");
-        System.out.println("║   CollabPaint Server v1.0    ║");
-        System.out.println("║   Protocol: NetworkProtocol  ║");
-        System.out.println("║   TCP Port: " + TCP_PORT + " ║");
+        System.out.println("║   CollabPaint NIO Server     ║");
+        System.out.println("║   TCP Port: " + TCP_PORT + "          ║");
         System.out.println("╚══════════════════════════════╝");
-        try (ServerSocket serverSocket = new ServerSocket(TCP_PORT)) {
-            System.out.println("[SERVER] Listening on port " + TCP_PORT);
-            while (running) {
-                try {
-                    Socket clientSocket = serverSocket.accept();
-                    System.out.println("[SERVER] New connection from: " + clientSocket.getInetAddress());
-                    ClientHandler handler = new ClientHandler(clientSocket, roomManager);
-                    Thread t = new Thread(handler, "ClientHandler-" + clientSocket.getPort());
-                    t.setDaemon(true);
-                    t.start();
-                } catch (IOException e) {
-                    if (running)
-                        System.err.println("[SERVER] Accept error: " + e.getMessage());
+
+        while (running) {
+            selector.select(); // Olay gelene kadar bekler
+            Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
+
+            while (keys.hasNext()) {
+                SelectionKey key = keys.next();
+                keys.remove();
+
+                if (!key.isValid())
+                    continue;
+
+                if (key.isAcceptable()) {
+                    handleAccept(key);
+                } else if (key.isReadable()) {
+                    handleRead(key);
                 }
             }
         }
     }
+
+    private void handleAccept(SelectionKey key) throws IOException {
+        ServerSocketChannel server = (ServerSocketChannel) key.channel();
+        SocketChannel client = server.accept();
+        client.configureBlocking(false);
+
+        ClientHandler handler = new ClientHandler(client, roomManager, this);
+        client.register(selector, SelectionKey.OP_READ, handler);
+        activeClients.add(handler);
+
+        System.out.println("[SERVER] New connection from: " + client.getRemoteAddress());
+    }
+
+    private void handleRead(SelectionKey key) {
+        ClientHandler handler = (ClientHandler) key.attachment();
+        try {
+            handler.handleRead();
+        } catch (IOException e) {
+            System.err.println("[SERVER] Read error: " + e.getMessage());
+            handler.cleanup();
+        }
+    }
+
+    public boolean isNicknameTaken(String nickname) {
+        if (nickname == null || nickname.trim().isEmpty())
+            return true;
+        String target = nickname.trim().toLowerCase();
+        for (ClientHandler handler : activeClients) {
+            String existing = handler.getNickname();
+            if (existing != null && existing.toLowerCase().equals(target)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void removeClient(ClientHandler handler) {
+        activeClients.remove(handler);
+    }
+
     public static void main(String[] args) throws IOException {
         new CollabServer().start();
     }

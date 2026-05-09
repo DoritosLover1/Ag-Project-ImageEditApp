@@ -5,17 +5,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Random;
 public class RoomManager {
     private final Map<String, Room> rooms = new ConcurrentHashMap<>();
-    private final Set<String> takenNicknames = ConcurrentHashMap.newKeySet();
     private final Random random = new Random();
-    public boolean registerNickname(String nickname) {
-        if (nickname == null || nickname.trim().isEmpty())
-            return false;
-        return takenNicknames.add(nickname.trim().toLowerCase());
-    }
-    public void unregisterNickname(String nickname) {
-        if (nickname != null)
-            takenNicknames.remove(nickname.trim().toLowerCase());
-    }
+
     public Room createRoom(String ownerNickname) {
         String code;
         do {

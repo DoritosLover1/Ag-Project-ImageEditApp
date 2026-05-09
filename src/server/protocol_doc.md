@@ -47,6 +47,9 @@ All messages follow a strict pipe-delimited format:
 | `ROOM_INFO` | S -> C | `RoomCode` | Confirmation of room entry/creation. |
 | `USER_LIST` | S -> C | `User1,User2,...` | List of all active users in the current room. |
 | `ERROR` | S -> C | `ErrorMessage` | Informs client of a failure (e.g., "Nickname taken"). |
+| `NEW_USERNAME` | C -> S | `OldNick\|NewNick` | Requests to change nickname. |
+| `NAME_CHANGED` | S -> C | `NewNickname` | Confirmation of successful name change. |
+| `LOGIN_SUCCESS` | S -> C | `Nickname` | Confirmation of successful login. |
 
 ### 5.2. Drawing Commands
 

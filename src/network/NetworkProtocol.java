@@ -22,6 +22,9 @@ public class NetworkProtocol {
     public static final String CMD_ROOM_INFO = "ROOM_INFO";
     public static final String CMD_USER_LIST = "USER_LIST";
     public static final String CMD_ERROR = "ERROR";
+    public static final String CMD_NEW_USERNAME = "NEW_USERNAME";
+    public static final String CMD_NAME_CHANGED = "NAME_CHANGED";
+    public static final String CMD_LOGIN_SUCCESS = "LOGIN_SUCCESS";
     private static String buildBase(String sender, String command, String data) {
         String id = UUID.randomUUID().toString().substring(0, 8);
         long timestamp = System.currentTimeMillis();
@@ -46,8 +49,17 @@ public class NetworkProtocol {
         String data = String.join(",", users);
         return buildBase("SERVER", CMD_USER_LIST, data);
     }
-    public static String buildError(String message) {
+    public static final String buildError(String message) {
         return buildBase("SERVER", CMD_ERROR, message);
+    }
+    public static String buildChangeName(String oldNickname, String newNickname) {
+        return buildBase(oldNickname, CMD_NEW_USERNAME, oldNickname + "|" + newNickname);
+    }
+    public static String buildNameChanged(String newNickname) {
+        return buildBase("SERVER", CMD_NAME_CHANGED, newNickname);
+    }
+    public static String buildLoginSuccess(String nickname) {
+        return buildBase("SERVER", CMD_LOGIN_SUCCESS, nickname);
     }
     public static String buildSquare(String sender, int x, int y, int w, int h, String color, int stroke,
             boolean filled, String id) {

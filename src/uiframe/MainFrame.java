@@ -72,8 +72,11 @@ public class MainFrame {
 
     private void goLobby() {
         currentScreen = "LOBBY";
+        mainPanel.add(lobbyPanel(), "LOBBY");
         cardLayout.show(mainPanel, "LOBBY");
         resizeFrame(LOBBY_SIZE, false);
+        mainPanel.revalidate();
+        mainPanel.repaint();
     }
 
     private void goCanvas() {
@@ -175,13 +178,23 @@ public class MainFrame {
                 networkManager.setOnError(msg -> {
                     JOptionPane.showMessageDialog(frame, "Sunucu Hatası: " + msg);
                 });
+                networkManager.setOnLoginSuccess(nick -> {
+                    this.username = nick;
+                    goLobby();
+                });
+                networkManager.setOnNameChanged(newNick -> {
+                    this.username = newNick;
+                    lobbyUsernameLabel.setText("Merhaba, Ressam(!) " + this.username);
+                    if (canvas != null)
+                        canvas.setUsername(this.username);
+                    JOptionPane.showMessageDialog(frame, "Adınız başarıyla değiştirildi: " + newNick);
+                });
                 setupNetworkHooks();
+                networkManager.connect();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Bağlantı hatası: " + ex.getMessage());
                 return;
             }
-            lobbyUsernameLabel.setText("Merhaba, Ressam(!) " + this.username);
-            goLobby();
         });
         usernameField.addActionListener(e -> loginBtn.doClick());
         return panel;
@@ -195,7 +208,7 @@ public class MainFrame {
         lobbyUsernameLabel.setFont(new Font("Arial", Font.BOLD, 20));
         lobbyUsernameLabel.setForeground(theme.titleText);
         panel.add(lobbyUsernameLabel, BorderLayout.NORTH);
-        JPanel center = new JPanel(new GridLayout(4, 1, 0, 8));
+        JPanel center = new JPanel(new GridLayout(5, 1, 0, 8));
         center.setOpaque(false);
         JButton createRoomBtn = new CustomButton("Oda Oluştur", theme);
         createRoomBtn.addActionListener(e -> {
@@ -223,6 +236,9 @@ public class MainFrame {
         });
         joinRoomCodeField.addActionListener(e -> joinRoomBtn.doClick());
         center.add(joinRow);
+        JButton changeNameBtn = new CustomButton("Ad Değiştir", theme);
+        changeNameBtn.addActionListener(e -> openChangeNameDialog());
+        center.add(changeNameBtn);
         JButton settingsBtn = new CustomButton("Ayarlar", theme);
         settingsBtn.addActionListener(e -> openSettingsDialog());
         center.add(settingsBtn);
@@ -558,6 +574,15 @@ public class MainFrame {
         dialog.pack();
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
+    }
+
+    private void openChangeNameDialog() {
+        String newName = JOptionPane.showInputDialog(frame, "Yeni kullanıcı adınızı girin:", username);
+        if (newName != null && !newName.trim().isEmpty() && !newName.equals(username)) {
+            if (networkManager != null) {
+                networkManager.sendRaw(NetworkProtocol.buildChangeName(username, newName.trim()));
+            }
+        }
     }
 
     private void rebuildPanels() {

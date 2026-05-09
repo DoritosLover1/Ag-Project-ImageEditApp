@@ -1,55 +1,73 @@
 package server;
-import models.*;
+
+import models.CanvasItem;
+import models.DrawShape;
+import models.PastedImage;
 import network.NetworkProtocol;
-import java.io.*;
-import java.net.Socket;
-import java.util.List;
-public class ClientHandler implements Runnable {
-    private final Socket socket;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+
+public class ClientHandler {
+    private final SocketChannel channel;
     private final RoomManager roomManager;
-    private PrintWriter out;
-    private BufferedReader in;
+    private final CollabServer server;
     private String nickname;
     private Room currentRoom;
-    public ClientHandler(Socket socket, RoomManager roomManager) {
-        this.socket = socket;
+    private final StringBuilder buffer = new StringBuilder();
+    private final ByteBuffer readBuffer = ByteBuffer.allocate(8192);
+
+    public ClientHandler(SocketChannel channel, RoomManager roomManager, CollabServer server) {
+        this.channel = channel;
         this.roomManager = roomManager;
+        this.server = server;
     }
-    @Override
-    public void run() {
-        try {
-            out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
-            String line;
-            while ((line = in.readLine()) != null) {
-                handleRawMessage(line);
-            }
-        } catch (Exception e) {
-            System.err.println("[CLIENT] Error for " + nickname + ": " + e.getMessage());
-        } finally {
+
+    public void handleRead() throws IOException {
+        readBuffer.clear();
+        int bytesRead = channel.read(readBuffer);
+        
+        if (bytesRead == -1) {
             cleanup();
+            return;
+        }
+
+        readBuffer.flip();
+        String data = StandardCharsets.UTF_8.decode(readBuffer).toString();
+        buffer.append(data);
+
+        // Satır sonuna göre mesajları ayır (Pipe delimited protocol)
+        int newlineIndex;
+        while ((newlineIndex = buffer.indexOf("\n")) != -1) {
+            String message = buffer.substring(0, newlineIndex).trim();
+            buffer.delete(0, newlineIndex + 1);
+            if (!message.isEmpty()) {
+                handleRawMessage(message);
+            }
         }
     }
+
     private void handleRawMessage(String raw) {
         String[] p = raw.split(NetworkProtocol.SEPARATOR);
-        if (p.length < 4)
-            return;
-        String sender = p[2];
+        if (p.length < 4) return;
+
         String command = p[3];
         try {
             switch (command) {
                 case NetworkProtocol.CMD_LOGIN:
                     String requested = p[4].trim();
-                    if (roomManager.registerNickname(requested)) {
+                    if (!server.isNicknameTaken(requested)) {
                         this.nickname = requested;
+                        send(NetworkProtocol.buildLoginSuccess(nickname));
                         System.out.println("[SERVER] User logged in: " + nickname);
                     } else {
                         send(NetworkProtocol.buildError("Nickname taken or invalid."));
                     }
                     break;
                 case NetworkProtocol.CMD_CREATE_ROOM:
-                    if (nickname == null)
-                        return;
+                    if (nickname == null) return;
                     leaveCurrentRoom();
                     currentRoom = roomManager.createRoom(nickname);
                     currentRoom.addMember(this);
@@ -57,8 +75,7 @@ public class ClientHandler implements Runnable {
                     broadcastUserList();
                     break;
                 case NetworkProtocol.CMD_JOIN_ROOM:
-                    if (nickname == null)
-                        return;
+                    if (nickname == null) return;
                     String code = p[4].trim().toUpperCase();
                     Room room = roomManager.getRoom(code);
                     if (room != null) {
@@ -76,6 +93,18 @@ public class ClientHandler implements Runnable {
                     break;
                 case NetworkProtocol.CMD_LEAVE_ROOM:
                     leaveCurrentRoom();
+                    break;
+                case NetworkProtocol.CMD_NEW_USERNAME:
+                    String oldNick = p[4].trim();
+                    String newNick = p[5].trim();
+                    if (!server.isNicknameTaken(newNick)) {
+                        this.nickname = newNick;
+                        send(NetworkProtocol.buildNameChanged(newNick));
+                        broadcastUserList();
+                        System.out.println("[SERVER] User changed name: " + oldNick + " -> " + newNick);
+                    } else {
+                        send(NetworkProtocol.buildError("Nickname '" + newNick + "' is already taken."));
+                    }
                     break;
                 case NetworkProtocol.CMD_SQUARE:
                 case NetworkProtocol.CMD_CIRCLE:
@@ -103,9 +132,7 @@ public class ClientHandler implements Runnable {
                     }
                     break;
                 case NetworkProtocol.CMD_CURSOR:
-                    if (currentRoom != null) {
-                        broadcastToOthers(raw);
-                    }
+                    if (currentRoom != null) broadcastToOthers(raw);
                     break;
                 case NetworkProtocol.CMD_DELETE:
                     if (currentRoom != null) {
@@ -124,6 +151,7 @@ public class ClientHandler implements Runnable {
             System.err.println("[SERVER] Protocol Error: " + ex.getMessage());
         }
     }
+
     private String buildItemMessage(CanvasItem item) {
         if (item.getItemType() == CanvasItem.ItemType.SHAPE) {
             return item.getShape().toNetworkString(item.getAddedBy());
@@ -134,48 +162,54 @@ public class ClientHandler implements Runnable {
                     img.getImageData(), img.getIdOfImage());
         }
     }
+
     private void leaveCurrentRoom() {
         if (currentRoom != null) {
             currentRoom.removeMember(this);
-            broadcastUserList(); 
+            broadcastUserList();
             roomManager.removeRoomIfEmpty(currentRoom.getCode());
             currentRoom = null;
         }
     }
+
     private void broadcastUserList() {
-        if (currentRoom == null)
-            return;
+        if (currentRoom == null) return;
         String listMsg = NetworkProtocol.buildUserList(currentRoom.getMemberNicknames());
         broadcastToAll(listMsg);
     }
+
     public void send(String msg) {
-        if (out != null)
-            out.println(msg);
-    }
-    private void broadcastToOthers(String msg) {
-        if (currentRoom == null)
-            return;
-        for (ClientHandler member : currentRoom.getMembers()) {
-            if (member != this)
-                member.send(msg);
+        if (channel.isOpen()) {
+            try {
+                channel.write(ByteBuffer.wrap((msg + "\n").getBytes(StandardCharsets.UTF_8)));
+            } catch (IOException e) {
+                cleanup();
+            }
         }
     }
+
+    private void broadcastToOthers(String msg) {
+        if (currentRoom == null) return;
+        for (ClientHandler member : currentRoom.getMembers()) {
+            if (member != this) member.send(msg);
+        }
+    }
+
     private void broadcastToAll(String msg) {
-        if (currentRoom == null)
-            return;
+        if (currentRoom == null) return;
         for (ClientHandler member : currentRoom.getMembers()) {
             member.send(msg);
         }
     }
-    private void cleanup() {
-        leaveCurrentRoom();
-        if (nickname != null)
-            roomManager.unregisterNickname(nickname);
+
+    public void cleanup() {
         try {
-            socket.close();
-        } catch (IOException ignored) {
-        }
+            leaveCurrentRoom();
+            server.removeClient(this);
+            channel.close();
+        } catch (IOException ignored) {}
     }
+
     public String getNickname() {
         return nickname;
     }

@@ -342,7 +342,7 @@ public class MainFrame {
         top.add(hint, BorderLayout.SOUTH);
         sidebar.add(top, BorderLayout.NORTH);
         sidebar.add(itemsBox, BorderLayout.CENTER);
-        chatPanel = new ChatPanel(username, message -> {
+        chatPanel = new ChatPanel(username, theme, message -> {
          if (networkManager != null) {
             networkManager.sendRaw(NetworkProtocol.buildChat(username, message));
          }
@@ -610,6 +610,7 @@ public class MainFrame {
             setupNetworkHooks();
         }
 
+        if (chatPanel != null) chatPanel.updateTheme(theme);  // ← bunu ekle
         cardLayout.show(mainPanel, currentScreen);
         frame.revalidate();
         frame.repaint();

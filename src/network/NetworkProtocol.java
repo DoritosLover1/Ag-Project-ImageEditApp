@@ -25,6 +25,7 @@ public class NetworkProtocol {
     public static final String CMD_NEW_USERNAME = "NEW_USERNAME";
     public static final String CMD_NAME_CHANGED = "NAME_CHANGED";
     public static final String CMD_LOGIN_SUCCESS = "LOGIN_SUCCESS";
+    public static final String CMD_CHAT = "CHAT";
     private static String buildBase(String sender, String command, String data) {
         String id = UUID.randomUUID().toString().substring(0, 8);
         long timestamp = System.currentTimeMillis();
@@ -101,6 +102,9 @@ public class NetworkProtocol {
     public static String buildClear(String sender) {
         return buildBase(sender, CMD_CLEAR, "ALL");
     }
+    public static String buildChat(String sender, String message) {
+    return buildBase(sender, CMD_CHAT, message);
+   }
     public static String buildCursor(String sender, int x, int y, String color) {
         String data = String.format("%d|%d|%s", x, y, color);
         return buildBase(sender, CMD_CURSOR, data);

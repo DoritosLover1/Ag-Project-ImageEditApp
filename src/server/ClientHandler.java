@@ -146,11 +146,19 @@ public class ClientHandler {
                         broadcastToAll(raw);
                     }
                     break;
+                case NetworkProtocol.CMD_CHAT:
+                    if (currentRoom != null && nickname != null) {
+                        String chatMsg = p[4].trim();
+                        if (!chatMsg.isEmpty()) {
+                        broadcastToAll(raw);
+                        System.out.println("[CHAT] " + nickname + ": " + chatMsg);
+                    }} 
+                    break;
+                 }  
+                } catch (Exception ex) {
+              System.err.println("[SERVER] Protocol Error: " + ex.getMessage());
+              }
             }
-        } catch (Exception ex) {
-            System.err.println("[SERVER] Protocol Error: " + ex.getMessage());
-        }
-    }
 
     private String buildItemMessage(CanvasItem item) {
         if (item.getItemType() == CanvasItem.ItemType.SHAPE) {

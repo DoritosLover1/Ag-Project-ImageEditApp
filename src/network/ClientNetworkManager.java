@@ -117,6 +117,11 @@ public class ClientNetworkManager {
                 if (onNameChanged != null)
                     onNameChanged.accept(p[4]);
                 break;
+            case NetworkProtocol.CMD_CHAT:
+                if (onChatReceived != null) {
+                    onChatReceived.accept(sender, p[4]);
+                }
+                break;
         }
     }
 
@@ -161,6 +166,12 @@ public class ClientNetworkManager {
         this.onNameChanged = callback;
     }
 
+    private java.util.function.BiConsumer<String, String> onChatReceived;
+
+    public void setOnChatReceived(java.util.function.BiConsumer<String, String> cb) {
+    this.onChatReceived = cb;
+    }
+    
     public void setOnLoginSuccess(Consumer<String> callback) {
         this.onLoginSuccess = callback;
     }

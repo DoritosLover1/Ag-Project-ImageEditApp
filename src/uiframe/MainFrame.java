@@ -25,6 +25,7 @@ public class MainFrame {
     private ClientNetworkManager networkManager;
     private DefaultListModel<String> memberModel;
     private DefaultListModel<String> itemListModel;
+    private ChatPanel chatPanel;
     private static final Dimension LOGIN_SIZE = new Dimension(300, 280);
     private static final Dimension LOBBY_SIZE = new Dimension(400, 320);
     private static final Dimension CANVAS_MIN_SIZE = new Dimension(1000, 600);
@@ -341,6 +342,12 @@ public class MainFrame {
         top.add(hint, BorderLayout.SOUTH);
         sidebar.add(top, BorderLayout.NORTH);
         sidebar.add(itemsBox, BorderLayout.CENTER);
+        chatPanel = new ChatPanel(username, message -> {
+         if (networkManager != null) {
+            networkManager.sendRaw(NetworkProtocol.buildChat(username, message));
+         }
+        });
+        sidebar.add(chatPanel, BorderLayout.SOUTH);
         return sidebar;
     }
 
@@ -635,6 +642,11 @@ public class MainFrame {
         canvas.setOnItemsCut(ids -> {
             for (String id : ids) {
                 networkManager.sendRaw(NetworkProtocol.buildDelete(username, id));
+            }
+        });
+        networkManager.setOnChatReceived((sender, message) -> {
+             if (chatPanel != null) {
+            chatPanel.receiveMessage(sender, message);
             }
         });
     }

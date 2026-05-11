@@ -363,11 +363,15 @@ public class MainFrame {
         top.add(hint, BorderLayout.SOUTH);
         sidebar.add(top, BorderLayout.NORTH);
         sidebar.add(itemsBox, BorderLayout.CENTER);
-        chatPanel = new ChatPanel(username, theme, message -> {
-         if (networkManager != null) {
-            networkManager.sendRaw(NetworkProtocol.buildChat(username, message));
-         }
-        });
+        
+        // ChatPanel varsa yeniden oluşturma, yoksa oluştur
+        if (chatPanel == null) {
+            chatPanel = new ChatPanel(username, theme, message -> {
+             if (networkManager != null) {
+                networkManager.sendRaw(NetworkProtocol.buildChat(username, message));
+             }
+            });
+        }
         sidebar.add(chatPanel, BorderLayout.SOUTH);
         return sidebar;
     }
@@ -671,8 +675,12 @@ public class MainFrame {
     }
 
     private void rebuildPanels() {
+        // Canvas snapshot'ını al
         java.util.List<CanvasItem> snap = (canvas != null && currentScreen.equals("CANVAS")) ? canvas.getItemsSnapshot()
                 : null;
+
+        // ChatPanel'i geçici olarak sakla (mesajları kaybetmemek için)
+        ChatPanel savedChatPanel = chatPanel;
 
         mainPanel.removeAll();
         mainPanel.add(loginPanel(), "LOGIN");
@@ -688,7 +696,12 @@ public class MainFrame {
             setupNetworkHooks();
         }
 
-        if (chatPanel != null) chatPanel.updateTheme(theme);  // ← bunu ekle
+        // ChatPanel'i geri yükle (tema güncellemesi ile)
+        if (savedChatPanel != null) {
+            chatPanel = savedChatPanel;
+            chatPanel.updateTheme(theme);
+        }
+        
         cardLayout.show(mainPanel, currentScreen);
         frame.revalidate();
         frame.repaint();

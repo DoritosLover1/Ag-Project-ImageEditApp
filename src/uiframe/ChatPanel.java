@@ -27,6 +27,23 @@ import javax.swing.text.StyledDocument;
 
 public class ChatPanel extends JPanel {
 
+    // Mesaj verisi sınıfı
+    private static class ChatMessage {
+        final String sender;
+        final String message;
+        final String time;
+        final boolean isSelf;
+        final boolean isSystem;
+
+        ChatMessage(String sender, String message, String time, boolean isSelf, boolean isSystem) {
+            this.sender = sender;
+            this.message = message;
+            this.time = time;
+            this.isSelf = isSelf;
+            this.isSystem = isSystem;
+        }
+    }
+
     private final JTextPane chatArea;
     private final JTextField inputField;
     private final JButton sendButton;
@@ -34,6 +51,7 @@ public class ChatPanel extends JPanel {
     private final JPanel inputPanel;
     private String localUsername;
     private final Consumer<String> onSend;
+    private final java.util.List<ChatMessage> messageHistory = new java.util.ArrayList<>();
 
     // Tema referansı — MainFrame.AppTheme
     private MainFrame.AppTheme theme;
@@ -153,6 +171,9 @@ public class ChatPanel extends JPanel {
         applyButtonTheme(sendButton);
         sendButton.repaint();
         inputPanel.repaint();
+        
+        // Mesajları yeniden yükle (tema renkleriyle)
+        reloadMessages();
         repaint();
     }
 
@@ -244,48 +265,69 @@ public class ChatPanel extends JPanel {
     }
 
     private void appendMessage(String sender, String message, boolean isSelf) {
+        String time = new SimpleDateFormat("HH:mm").format(new Date());
+        
+        // Mesajı geçmişe kaydet
+        messageHistory.add(new ChatMessage(sender, message, time, isSelf, false));
+        
+        // Mesajı görüntüle
+        displayMessage(sender, message, time, isSelf, false);
+    }
+
+    private void appendSystemMessage(String text) {
+        // Sistem mesajını geçmişe kaydet
+        messageHistory.add(new ChatMessage("", text, "", false, true));
+        
+        // Sistem mesajını görüntüle
+        displayMessage("", text, "", false, true);
+    }
+
+    private void displayMessage(String sender, String message, String time, boolean isSelf, boolean isSystem) {
         StyledDocument doc = chatArea.getStyledDocument();
         try {
-            String time = new SimpleDateFormat("HH:mm").format(new Date());
+            if (isSystem) {
+                Style s = chatArea.addStyle("sys", null);
+                Color sysColor = theme != null ? theme.hintText : SIDEBAR_HEADER;
+                StyleConstants.setForeground(s, sysColor);
+                StyleConstants.setItalic(s, true);
+                StyleConstants.setFontSize(s, 10);
+                doc.insertString(doc.getLength(), "  " + message + "\n", s);
+            } else {
+                Color msgSelfColor = theme != null ? theme.chatMsgSelf : MSG_SELF;
+                Color msgOtherColor = theme != null ? theme.chatMsgOther : MSG_OTHER;
+                Color msgTimeColor = theme != null ? theme.chatMsgTime : MSG_TIME;
+                Color msgTextColor = theme != null ? theme.chatMsgText : SIDEBAR_TEXT;
 
-            Color msgSelfColor = theme != null ? theme.chatMsgSelf : MSG_SELF;
-            Color msgOtherColor = theme != null ? theme.chatMsgOther : MSG_OTHER;
-            Color msgTimeColor = theme != null ? theme.chatMsgTime : MSG_TIME;
-            Color msgTextColor = theme != null ? theme.chatMsgText : SIDEBAR_TEXT;
+                Style nameStyle = chatArea.addStyle("n" + System.nanoTime(), null);
+                StyleConstants.setForeground(nameStyle, isSelf ? msgSelfColor : msgOtherColor);
+                StyleConstants.setBold(nameStyle, true);
+                StyleConstants.setFontSize(nameStyle, 11);
+                doc.insertString(doc.getLength(), sender, nameStyle);
 
-            Style nameStyle = chatArea.addStyle("n" + System.nanoTime(), null);
-            StyleConstants.setForeground(nameStyle, isSelf ? msgSelfColor : msgOtherColor);
-            StyleConstants.setBold(nameStyle, true);
-            StyleConstants.setFontSize(nameStyle, 11);
-            doc.insertString(doc.getLength(), sender, nameStyle);
+                Style timeStyle = chatArea.addStyle("t" + System.nanoTime(), null);
+                StyleConstants.setForeground(timeStyle, msgTimeColor);
+                StyleConstants.setFontSize(timeStyle, 10);
+                doc.insertString(doc.getLength(), "  " + time + "\n", timeStyle);
 
-            Style timeStyle = chatArea.addStyle("t" + System.nanoTime(), null);
-            StyleConstants.setForeground(timeStyle, msgTimeColor);
-            StyleConstants.setFontSize(timeStyle, 10);
-            doc.insertString(doc.getLength(), "  " + time + "\n", timeStyle);
-
-            Style msgStyle = chatArea.addStyle("m" + System.nanoTime(), null);
-            StyleConstants.setForeground(msgStyle, msgTextColor);
-            StyleConstants.setFontSize(msgStyle, 11);
-            doc.insertString(doc.getLength(), "  " + message + "\n\n", msgStyle);
+                Style msgStyle = chatArea.addStyle("m" + System.nanoTime(), null);
+                StyleConstants.setForeground(msgStyle, msgTextColor);
+                StyleConstants.setFontSize(msgStyle, 11);
+                doc.insertString(doc.getLength(), "  " + message + "\n\n", msgStyle);
+            }
 
             chatArea.setCaretPosition(doc.getLength());
         } catch (BadLocationException ignored) {
         }
     }
 
-    private void appendSystemMessage(String text) {
-        SwingUtilities.invokeLater(() -> {
-            StyledDocument doc = chatArea.getStyledDocument();
-            try {
-                Style s = chatArea.addStyle("sys", null);
-                Color sysColor = theme != null ? theme.hintText : SIDEBAR_HEADER;
-                StyleConstants.setForeground(s, sysColor);
-                StyleConstants.setItalic(s, true);
-                StyleConstants.setFontSize(s, 10);
-                doc.insertString(doc.getLength(), "  " + text + "\n", s);
-            } catch (BadLocationException ignored) {
-            }
-        });
+    // Tema değişince mesajları yeniden yükle
+    private void reloadMessages() {
+        // Chat alanını temizle
+        chatArea.setText("");
+        
+        // Tüm mesajları yeniden görüntüle
+        for (ChatMessage msg : messageHistory) {
+            displayMessage(msg.sender, msg.message, msg.time, msg.isSelf, msg.isSystem);
+        }
     }
 }

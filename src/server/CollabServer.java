@@ -8,27 +8,42 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class CollabServer {
-    public static final int TCP_PORT = 12345;
+    public static int TCP_PORT = 12345;
     private final RoomManager roomManager = new RoomManager();
     private final Queue<ClientHandler> activeClients = new ConcurrentLinkedQueue<>();
     private Selector selector;
     private ServerSocketChannel serverChannel;
     private volatile boolean running = true;
+    private String serverIp = "0.0.0.0";
 
     public void start() throws IOException {
+        java.util.Properties env = new java.util.Properties();
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(".env")) {
+            env.load(fis);
+            if (env.getProperty("SERVER_IP") != null) {
+                serverIp = env.getProperty("SERVER_IP").trim().replace("\"", "");
+            }
+            if (env.getProperty("PORT") != null) {
+                TCP_PORT = Integer.parseInt(env.getProperty("PORT").trim().replace("\"", ""));
+            }
+        } catch (IOException e) {
+            System.out.println("[SERVER] .env dosyasi bulunamadi, varsayilan IP kullanilacak: " + serverIp);
+        }
+
         selector = Selector.open();
         serverChannel = ServerSocketChannel.open();
-        serverChannel.bind(new InetSocketAddress(TCP_PORT));
+        serverChannel.bind(new InetSocketAddress(serverIp, TCP_PORT));
         serverChannel.configureBlocking(false);
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 
         System.out.println("╔══════════════════════════════╗");
         System.out.println("║   CollabPaint NIO Server     ║");
-        System.out.println("║   TCP Port: " + TCP_PORT + "          ║");
+        System.out.println("║   IP: " + serverIp + "       ║");
+        System.out.println("║   TCP Port: " + TCP_PORT + " ║");
         System.out.println("╚══════════════════════════════╝");
 
         while (running) {
-            selector.select(); // Olay gelene kadar bekler
+            selector.select();
             Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
 
             while (keys.hasNext()) {

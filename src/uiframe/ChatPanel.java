@@ -43,15 +43,15 @@ public class ChatPanel extends JPanel {
     private MainFrame.AppTheme theme;
 
     // Sidebar sabit renkleri (tema değişmez olanlar)
-    private static final Color SIDEBAR_BG       = new Color(24, 24, 36);
-    private static final Color SIDEBAR_PANEL    = new Color(20, 20, 35);
+    private static final Color SIDEBAR_BG = new Color(24, 24, 36);
+    private static final Color SIDEBAR_PANEL = new Color(20, 20, 35);
     private static final Color SIDEBAR_TITLE_BG = new Color(30, 30, 50);
-    private static final Color SIDEBAR_BORDER   = new Color(60, 60, 90);
-    private static final Color SIDEBAR_TEXT     = new Color(180, 220, 255);
-    private static final Color SIDEBAR_HEADER   = new Color(160, 180, 220);
-    private static final Color MSG_SELF         = new Color(130, 180, 255);
-    private static final Color MSG_OTHER        = new Color(130, 220, 160);
-    private static final Color MSG_TIME         = new Color(100, 110, 150);
+    private static final Color SIDEBAR_BORDER = new Color(60, 60, 90);
+    private static final Color SIDEBAR_TEXT = new Color(180, 220, 255);
+    private static final Color SIDEBAR_HEADER = new Color(160, 180, 220);
+    private static final Color MSG_SELF = new Color(130, 180, 255);
+    private static final Color MSG_OTHER = new Color(130, 220, 160);
+    private static final Color MSG_TIME = new Color(100, 110, 150);
 
     public ChatPanel(String localUsername, MainFrame.AppTheme theme, Consumer<String> onSend) {
         this.localUsername = localUsername != null ? localUsername : "Sen";
@@ -71,9 +71,8 @@ public class ChatPanel extends JPanel {
         titleLabel.setOpaque(true);
         titleLabel.setBackground(SIDEBAR_TITLE_BG);
         titleLabel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, SIDEBAR_BORDER),
-            BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
+                BorderFactory.createMatteBorder(0, 0, 1, 0, SIDEBAR_BORDER),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         add(titleLabel, BorderLayout.NORTH);
 
         // --- Sohbet Alanı ---
@@ -136,58 +135,59 @@ public class ChatPanel extends JPanel {
         this.localUsername = username != null ? username : "Sen";
     }
 
-    // --- Input stil uygula (tema renklerini kullan, sidebar sabitlerini fallback yap) ---
+    // --- Input stil uygula (tema renklerini kullan, sidebar sabitlerini fallback
+    // yap) ---
     private void applyInputStyle() {
-        Color bg     = theme != null ? theme.inputBg     : new Color(30, 30, 48);
+        Color bg = theme != null ? theme.inputBg : new Color(30, 30, 48);
         Color border = theme != null ? theme.inputBorder : SIDEBAR_BORDER;
-        Color text   = theme != null ? theme.titleText   : SIDEBAR_TEXT;
+        Color text = theme != null ? theme.titleText : SIDEBAR_TEXT;
 
         inputField.setBackground(bg);
         inputField.setForeground(text);
         inputField.setCaretColor(text);
         inputField.setFont(new Font("SansSerif", Font.PLAIN, 11));
         inputField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(border),
-            new EmptyBorder(4, 7, 4, 7)
-        ));
+                BorderFactory.createLineBorder(border),
+                new EmptyBorder(4, 7, 4, 7)));
     }
 
     private JButton makeSendButton() {
         JButton btn = new JButton("Gönder");
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
-        btn.setContentAreaFilled(true);  // true yap
+        btn.setContentAreaFilled(true); // true yap
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setFont(new Font("SansSerif", Font.BOLD, 11));
         btn.setForeground(Color.WHITE);
-        applyButtonTheme(btn);  // tema rengini uygula
+        applyButtonTheme(btn); // tema rengini uygula
         return btn;
     }
-
 
     private void applyButtonTheme(JButton btn) {
         Color base = theme != null ? theme.buttonColor : new Color(100, 150, 200);
         btn.setBackground(base);
         btn.setBorder(BorderFactory.createCompoundBorder(
-        BorderFactory.createLineBorder(base.darker(), 1),
-        new EmptyBorder(4, 8, 4, 8)
-        ));
+                BorderFactory.createLineBorder(base.darker(), 1),
+                new EmptyBorder(4, 8, 4, 8)));
         btn.setForeground(theme != null ? theme.titleText : Color.WHITE);
     }
-    
+
     private void setPlaceholder() {
         String placeholder = "Mesaj yaz...";
         inputField.setText(placeholder);
         inputField.setForeground(SIDEBAR_HEADER);
         inputField.addFocusListener(new FocusAdapter() {
-            @Override public void focusGained(FocusEvent e) {
+            @Override
+            public void focusGained(FocusEvent e) {
                 if (inputField.getText().equals(placeholder)) {
                     inputField.setText("");
                     Color text = theme != null ? theme.titleText : SIDEBAR_TEXT;
                     inputField.setForeground(text);
                 }
             }
-            @Override public void focusLost(FocusEvent e) {
+
+            @Override
+            public void focusLost(FocusEvent e) {
                 if (inputField.getText().isEmpty()) {
                     inputField.setText(placeholder);
                     inputField.setForeground(SIDEBAR_HEADER);
@@ -198,17 +198,20 @@ public class ChatPanel extends JPanel {
 
     private void sendMessage() {
         String text = inputField.getText().trim();
-        if (text.isEmpty() || text.equals("Mesaj yaz...")) return;
+        if (text.isEmpty() || text.equals("Mesaj yaz..."))
+            return;
         inputField.setText("");
         Color textColor = theme != null ? theme.titleText : SIDEBAR_TEXT;
         inputField.setForeground(textColor);
-        if (onSend != null) onSend.accept(text);
+        if (onSend != null)
+            onSend.accept(text);
         appendMessage(localUsername, text, true);
     }
 
     public void receiveMessage(String sender, String message) {
         SwingUtilities.invokeLater(() -> {
-            if (sender.equals(localUsername)) return;
+            if (sender.equals(localUsername))
+                return;
             appendMessage(sender, message, false);
         });
     }
@@ -235,7 +238,8 @@ public class ChatPanel extends JPanel {
             doc.insertString(doc.getLength(), "  " + message + "\n\n", msgStyle);
 
             chatArea.setCaretPosition(doc.getLength());
-        } catch (BadLocationException ignored) {}
+        } catch (BadLocationException ignored) {
+        }
     }
 
     private void appendSystemMessage(String text) {
@@ -247,7 +251,8 @@ public class ChatPanel extends JPanel {
                 StyleConstants.setItalic(s, true);
                 StyleConstants.setFontSize(s, 10);
                 doc.insertString(doc.getLength(), "  " + text + "\n", s);
-            } catch (BadLocationException ignored) {}
+            } catch (BadLocationException ignored) {
+            }
         });
     }
 }

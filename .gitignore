@@ -2,6 +2,8 @@
 bin/
 *.class
 
+.env
+
 # IDE Ayarları
 .settings/
 .classpath

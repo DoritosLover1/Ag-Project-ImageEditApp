@@ -146,8 +146,8 @@ public class MainFrame {
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         panel.add(title, gbc);
-        CustomButton.addInputFieldAsForm(panel, 2, gbc, "Localhost:",
-                serverIPField = new JTextField("localhost"), theme);
+        CustomButton.addInputFieldAsForm(panel, 2, gbc, "Sunucu Bilgisi:",
+                serverIPField = new JTextField("localhost:12345"), theme);
         CustomButton.addInputFieldAsForm(panel, 3, gbc, "Username:",
                 usernameField = new JTextField(), theme);
         JButton loginBtn = new CustomButton("Login", theme);
@@ -157,9 +157,20 @@ public class MainFrame {
         panel.add(loginBtn, gbc);
         loginBtn.addActionListener(e -> {
             this.username = usernameField.getText();
-            String serverIP = serverIPField.getText();
+            String serverInput = serverIPField.getText().trim();
+            String ip = serverInput;
+            int port = 12345;
+            if (serverInput.contains(":")) {
+                String[] parts = serverInput.split(":");
+                ip = parts[0];
+                try {
+                    port = Integer.parseInt(parts[1]);
+                } catch (NumberFormatException ex) {
+                    System.err.println("Gecersiz port formati, varsayilan port kullaniliyor.");
+                }
+            }
             try {
-                this.networkManager = new ClientNetworkManager(serverIP, 12345, username, canvas);
+                this.networkManager = new ClientNetworkManager(ip, port, username, canvas);
                 networkManager.setOnRoomJoined(code -> {
                     this.myRoomCode = code;
                     goCanvas();

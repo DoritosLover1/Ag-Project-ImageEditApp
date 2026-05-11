@@ -5,10 +5,6 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.text.SimpleDateFormat;
@@ -59,38 +55,45 @@ public class ChatPanel extends JPanel {
         this.onSend = onSend;
 
         setLayout(new BorderLayout(0, 0));
-        setBackground(SIDEBAR_BG);
-        setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, SIDEBAR_BORDER));
+        
+        Color panelBg = theme != null ? theme.chatPanelBg : SIDEBAR_BG;
+        Color panelBorder = theme != null ? theme.inputBorder : SIDEBAR_BORDER;
+        
+        setBackground(panelBg);
+        setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, panelBorder));
         setPreferredSize(new Dimension(230, 260));
         setMinimumSize(new Dimension(230, 100));
 
         // --- Başlık ---
         titleLabel = new JLabel("Mesajlaşma");
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
-        titleLabel.setForeground(SIDEBAR_HEADER);
+        Color titleFg = theme != null ? theme.titleText : SIDEBAR_HEADER;
+        titleLabel.setForeground(titleFg);
         titleLabel.setOpaque(true);
-        titleLabel.setBackground(SIDEBAR_TITLE_BG);
+        Color titleBg = theme != null ? theme.sidebarBg : SIDEBAR_TITLE_BG;
+        titleLabel.setBackground(titleBg);
         titleLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, SIDEBAR_BORDER),
+                BorderFactory.createMatteBorder(0, 0, 1, 0, panelBorder),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         add(titleLabel, BorderLayout.NORTH);
 
         // --- Sohbet Alanı ---
         chatArea = new JTextPane();
         chatArea.setEditable(false);
-        chatArea.setBackground(SIDEBAR_PANEL);
+        Color areaBg = theme != null ? theme.chatAreaBg : SIDEBAR_PANEL;
+        chatArea.setBackground(areaBg);
         chatArea.setBorder(new EmptyBorder(4, 6, 4, 6));
 
         JScrollPane scrollPane = new JScrollPane(chatArea);
         scrollPane.setBorder(null);
-        scrollPane.getViewport().setBackground(SIDEBAR_PANEL);
-        scrollPane.getVerticalScrollBar().setBackground(SIDEBAR_BG);
+        scrollPane.getViewport().setBackground(areaBg);
+        scrollPane.getVerticalScrollBar().setBackground(panelBg);
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
         add(scrollPane, BorderLayout.CENTER);
 
         // --- Giriş Alanı ---
         inputPanel = new JPanel(new BorderLayout(4, 0));
-        inputPanel.setBackground(SIDEBAR_BG);
+        inputPanel.setBackground(panelBg);
         inputPanel.setBorder(new EmptyBorder(5, 6, 6, 6));
         inputPanel.setMinimumSize(new Dimension(0, 42));
         inputPanel.setPreferredSize(new Dimension(0, 42));
@@ -124,6 +127,28 @@ public class ChatPanel extends JPanel {
     // Tema değişince MainFrame'den çağrılır
     public void updateTheme(MainFrame.AppTheme newTheme) {
         this.theme = newTheme;
+        
+        // Panel arka planları
+        Color panelBg = theme.chatPanelBg;
+        Color areaBg = theme.chatAreaBg;
+        Color borderColor = theme.inputBorder;
+        
+        setBackground(panelBg);
+        setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, borderColor));
+        inputPanel.setBackground(panelBg);
+        chatArea.setBackground(areaBg);
+        
+        JScrollPane scrollPane = (JScrollPane) chatArea.getParent().getParent();
+        scrollPane.getViewport().setBackground(areaBg);
+        scrollPane.getVerticalScrollBar().setBackground(panelBg);
+        
+        // Başlık
+        titleLabel.setForeground(theme.titleText);
+        titleLabel.setBackground(theme.sidebarBg);
+        titleLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, borderColor),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        
         applyInputStyle();
         applyButtonTheme(sendButton);
         sendButton.repaint();
@@ -175,13 +200,14 @@ public class ChatPanel extends JPanel {
     private void setPlaceholder() {
         String placeholder = "Mesaj yaz...";
         inputField.setText(placeholder);
-        inputField.setForeground(SIDEBAR_HEADER);
+        Color hintColor = theme != null ? theme.hintText : SIDEBAR_HEADER;
+        inputField.setForeground(hintColor);
         inputField.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
                 if (inputField.getText().equals(placeholder)) {
                     inputField.setText("");
-                    Color text = theme != null ? theme.titleText : SIDEBAR_TEXT;
+                    Color text = theme != null ? theme.chatMsgText : SIDEBAR_TEXT;
                     inputField.setForeground(text);
                 }
             }
@@ -190,7 +216,8 @@ public class ChatPanel extends JPanel {
             public void focusLost(FocusEvent e) {
                 if (inputField.getText().isEmpty()) {
                     inputField.setText(placeholder);
-                    inputField.setForeground(SIDEBAR_HEADER);
+                    Color hintColor = theme != null ? theme.hintText : SIDEBAR_HEADER;
+                    inputField.setForeground(hintColor);
                 }
             }
         });
@@ -201,7 +228,7 @@ public class ChatPanel extends JPanel {
         if (text.isEmpty() || text.equals("Mesaj yaz..."))
             return;
         inputField.setText("");
-        Color textColor = theme != null ? theme.titleText : SIDEBAR_TEXT;
+        Color textColor = theme != null ? theme.chatMsgText : SIDEBAR_TEXT;
         inputField.setForeground(textColor);
         if (onSend != null)
             onSend.accept(text);
@@ -221,19 +248,24 @@ public class ChatPanel extends JPanel {
         try {
             String time = new SimpleDateFormat("HH:mm").format(new Date());
 
+            Color msgSelfColor = theme != null ? theme.chatMsgSelf : MSG_SELF;
+            Color msgOtherColor = theme != null ? theme.chatMsgOther : MSG_OTHER;
+            Color msgTimeColor = theme != null ? theme.chatMsgTime : MSG_TIME;
+            Color msgTextColor = theme != null ? theme.chatMsgText : SIDEBAR_TEXT;
+
             Style nameStyle = chatArea.addStyle("n" + System.nanoTime(), null);
-            StyleConstants.setForeground(nameStyle, isSelf ? MSG_SELF : MSG_OTHER);
+            StyleConstants.setForeground(nameStyle, isSelf ? msgSelfColor : msgOtherColor);
             StyleConstants.setBold(nameStyle, true);
             StyleConstants.setFontSize(nameStyle, 11);
             doc.insertString(doc.getLength(), sender, nameStyle);
 
             Style timeStyle = chatArea.addStyle("t" + System.nanoTime(), null);
-            StyleConstants.setForeground(timeStyle, MSG_TIME);
+            StyleConstants.setForeground(timeStyle, msgTimeColor);
             StyleConstants.setFontSize(timeStyle, 10);
             doc.insertString(doc.getLength(), "  " + time + "\n", timeStyle);
 
             Style msgStyle = chatArea.addStyle("m" + System.nanoTime(), null);
-            StyleConstants.setForeground(msgStyle, SIDEBAR_TEXT);
+            StyleConstants.setForeground(msgStyle, msgTextColor);
             StyleConstants.setFontSize(msgStyle, 11);
             doc.insertString(doc.getLength(), "  " + message + "\n\n", msgStyle);
 
@@ -247,7 +279,8 @@ public class ChatPanel extends JPanel {
             StyledDocument doc = chatArea.getStyledDocument();
             try {
                 Style s = chatArea.addStyle("sys", null);
-                StyleConstants.setForeground(s, SIDEBAR_HEADER);
+                Color sysColor = theme != null ? theme.hintText : SIDEBAR_HEADER;
+                StyleConstants.setForeground(s, sysColor);
                 StyleConstants.setItalic(s, true);
                 StyleConstants.setFontSize(s, 10);
                 doc.insertString(doc.getLength(), "  " + text + "\n", s);

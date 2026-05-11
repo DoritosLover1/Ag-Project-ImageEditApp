@@ -36,8 +36,16 @@ public class MainFrame {
         public Color inputBorder = new Color(100, 100, 150);
         public Color buttonColor = new Color(100, 150, 200);
         public Color subText = new Color(200, 200, 255);
+        public Color sidebarBg = new Color(24, 24, 36);
         public Color titleText = Color.WHITE;
         public Color hintText = Color.LIGHT_GRAY;
+        // Chat Panel cores (novas)
+        public Color chatPanelBg = new Color(20, 20, 35);
+        public Color chatAreaBg = new Color(20, 20, 35);
+        public Color chatMsgSelf = new Color(130, 180, 255);
+        public Color chatMsgOther = new Color(130, 220, 160);
+        public Color chatMsgTime = new Color(100, 110, 150);
+        public Color chatMsgText = Color.WHITE;
     }
 
     public AppTheme theme = new AppTheme();
@@ -288,17 +296,18 @@ public class MainFrame {
 
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout());
-        sidebar.setBackground(new Color(24, 24, 36));
+        sidebar.setBackground(theme.sidebarBg);
         sidebar.setPreferredSize(new Dimension(230, 0));
-        sidebar.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(60, 60, 80)));
+        sidebar.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, theme.inputBorder));
         memberModel = new DefaultListModel<>();
         JList<String> memberList = new JList<>(memberModel);
-        memberList.setBackground(new Color(30, 30, 48));
-        memberList.setForeground(new Color(180, 220, 255));
+        memberList.setBackground(theme.sidebarBg);
+        memberList.setForeground(theme.titleText);
         memberList.setFont(new Font("SansSerif", Font.PLAIN, 12));
         memberList.setBorder(new EmptyBorder(4, 8, 4, 8));
         JScrollPane memberScroll = new JScrollPane(memberList);
         memberScroll.setBorder(null);
+        memberScroll.getViewport().setBackground(theme.sidebarBg);
         memberScroll.setPreferredSize(new Dimension(230, 110));
         JPanel membersBox = new JPanel(new BorderLayout());
         membersBox.setOpaque(false);
@@ -324,8 +333,8 @@ public class MainFrame {
                 }
             }
         });
-        itemList.setBackground(new Color(20, 20, 35));
-        itemList.setForeground(new Color(200, 220, 200));
+        itemList.setBackground(theme.sidebarBg);
+        itemList.setForeground(theme.titleText);
         itemList.setFont(new Font("SansSerif", Font.PLAIN, 11));
         itemList.setBorder(new EmptyBorder(4, 8, 4, 8));
         itemList.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -337,6 +346,7 @@ public class MainFrame {
         });
         JScrollPane itemScroll = new JScrollPane(itemList);
         itemScroll.setBorder(null);
+        itemScroll.getViewport().setBackground(theme.sidebarBg);
         JPanel itemsBox = new JPanel(new BorderLayout());
         itemsBox.setOpaque(false);
         itemsBox.add(sectionTitle("Oge Listesi"), BorderLayout.NORTH);
@@ -344,7 +354,7 @@ public class MainFrame {
         JLabel hint = new JLabel(
                 "<html><center>Sec araciyla tikla,<br>Delete ile sil</center></html>",
                 SwingConstants.CENTER);
-        hint.setForeground(new Color(120, 120, 160));
+        hint.setForeground(theme.hintText);
         hint.setFont(new Font("SansSerif", Font.ITALIC, 10));
         hint.setBorder(new EmptyBorder(6, 4, 6, 4));
         JPanel top = new JPanel(new BorderLayout());
@@ -365,11 +375,11 @@ public class MainFrame {
     private JLabel sectionTitle(String text) {
         JLabel lbl = new JLabel(text);
         lbl.setFont(new Font("SansSerif", Font.BOLD, 12));
-        lbl.setForeground(new Color(160, 180, 220));
+        lbl.setForeground(theme.titleText);
         lbl.setOpaque(true);
-        lbl.setBackground(new Color(30, 30, 50));
+        lbl.setBackground(theme.sidebarBg);
         lbl.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(60, 60, 90)),
+                BorderFactory.createMatteBorder(00, 0, 1, 0, theme.inputBorder),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         return lbl;
     }
@@ -532,11 +542,61 @@ public class MainFrame {
         temp.subText = theme.subText;
         temp.titleText = theme.titleText;
         temp.hintText = theme.hintText;
+        temp.sidebarBg = theme.sidebarBg;
+        temp.chatPanelBg = theme.chatPanelBg;
+        temp.chatAreaBg = theme.chatAreaBg;
+        temp.chatMsgSelf = theme.chatMsgSelf;
+        temp.chatMsgOther = theme.chatMsgOther;
+        temp.chatMsgTime = theme.chatMsgTime;
+        temp.chatMsgText = theme.chatMsgText;
+
         String[] labels = {
-                "Arka Plan", "Girdi Arka Planı", "Girdi Kenarlık",
-                "Buton Rengi", "Alt Metin", "Başlık Metni", "İpucu Metni"
+            "Arka Plan", "Girdi Arka Planı", "Girdi Kenarlık",
+            "Buton Rengi", "Alt Metin", "Başlık Metni", "İpucu Metni",
+            "Kenar Çubuğu", "Sohbet Arka Planı", "Sohbet Alanı", 
+            "Sohbet Mesajım", "Sohbet Diğer", "Sohbet Saati", "Sohbet Metni"
         };
         JButton[] colorBtns = new JButton[labels.length];
+
+        // === TEMA PRESET SEÇER ===
+        JLabel presetLabel = new JLabel("Tema Ön Ayarları:");
+        presetLabel.setForeground(theme.titleText);
+        presetLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.6;
+        dialog.add(presetLabel, gbc);
+
+        JComboBox<String> presetCombo = new JComboBox<>(getAvailableThemes());
+        presetCombo.setBackground(theme.inputBg);
+        presetCombo.setForeground(theme.titleText);
+        presetCombo.addActionListener(e -> {
+            String selected = (String) presetCombo.getSelectedItem();
+            if (selected != null) {
+                AppTheme preset = getThemePreset(selected.toLowerCase().replace(" ", "_"));
+                temp.background = preset.background;
+                temp.inputBg = preset.inputBg;
+                temp.inputBorder = preset.inputBorder;
+                temp.buttonColor = preset.buttonColor;
+                temp.subText = preset.subText;
+                temp.titleText = preset.titleText;
+                temp.hintText = preset.hintText;
+                temp.sidebarBg = preset.sidebarBg;
+                temp.chatPanelBg = preset.chatPanelBg;
+                temp.chatAreaBg = preset.chatAreaBg;
+                temp.chatMsgSelf = preset.chatMsgSelf;
+                temp.chatMsgOther = preset.chatMsgOther;
+                temp.chatMsgTime = preset.chatMsgTime;
+                temp.chatMsgText = preset.chatMsgText;
+                // Renk düğmelerini güncelle
+                for (int j = 0; j < colorBtns.length && colorBtns[j] != null; j++) {
+                    colorBtns[j].setBackground(getThemeColorByIndex(temp, j));
+                }
+            }
+        });
+        gbc.gridx = 1;
+        gbc.weightx = 0.4;
+        dialog.add(presetCombo, gbc);
         for (int i = 0; i < labels.length; i++) {
             final int idx = i;
             JLabel lbl = new JLabel(labels[i]);
@@ -558,7 +618,7 @@ public class MainFrame {
                 }
             });
             gbc.gridx = 0;
-            gbc.gridy = i;
+            gbc.gridy = i + 1;
             gbc.weightx = 0.6;
             dialog.add(lbl, gbc);
             gbc.gridx = 1;
@@ -577,6 +637,13 @@ public class MainFrame {
             theme.subText = temp.subText;
             theme.titleText = temp.titleText;
             theme.hintText = temp.hintText;
+            theme.sidebarBg = temp.sidebarBg;
+            theme.chatPanelBg = temp.chatPanelBg;
+            theme.chatAreaBg = temp.chatAreaBg;
+            theme.chatMsgSelf = temp.chatMsgSelf;
+            theme.chatMsgOther = temp.chatMsgOther;
+            theme.chatMsgTime = temp.chatMsgTime;
+            theme.chatMsgText = temp.chatMsgText;
             saveTheme();
             rebuildPanels();
             dialog.dispose();
@@ -585,7 +652,7 @@ public class MainFrame {
         btnRow.add(cancelBtn);
         btnRow.add(applyBtn);
         gbc.gridx = 0;
-        gbc.gridy = labels.length;
+        gbc.gridy = labels.length + 1;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(16, 12, 12, 12);
         dialog.add(btnRow, gbc);
@@ -636,6 +703,13 @@ public class MainFrame {
             case 4 -> t.subText;
             case 5 -> t.titleText;
             case 6 -> t.hintText;
+            case 7 -> t.sidebarBg;
+            case 8 -> t.chatPanelBg;
+            case 9 -> t.chatAreaBg;
+            case 10 -> t.chatMsgSelf;
+            case 11 -> t.chatMsgOther;
+            case 12 -> t.chatMsgTime;
+            case 13 -> t.chatMsgText;
             default -> Color.GRAY;
         };
     }
@@ -672,6 +746,13 @@ public class MainFrame {
             case 4 -> t.subText = c;
             case 5 -> t.titleText = c;
             case 6 -> t.hintText = c;
+            case 7 -> t.sidebarBg = c;
+            case 8 -> t.chatPanelBg = c;
+            case 9 -> t.chatAreaBg = c;
+            case 10 -> t.chatMsgSelf = c;
+            case 11 -> t.chatMsgOther = c;
+            case 12 -> t.chatMsgTime = c;
+            case 13 -> t.chatMsgText = c;
         }
     }
 
@@ -684,6 +765,13 @@ public class MainFrame {
         props.setProperty("subText", colorToHex(theme.subText));
         props.setProperty("titleText", colorToHex(theme.titleText));
         props.setProperty("hintText", colorToHex(theme.hintText));
+        props.setProperty("sidebarBg", colorToHex(theme.sidebarBg));
+        props.setProperty("chatPanelBg", colorToHex(theme.chatPanelBg));
+        props.setProperty("chatAreaBg", colorToHex(theme.chatAreaBg));
+        props.setProperty("chatMsgSelf", colorToHex(theme.chatMsgSelf));
+        props.setProperty("chatMsgOther", colorToHex(theme.chatMsgOther));
+        props.setProperty("chatMsgTime", colorToHex(theme.chatMsgTime));
+        props.setProperty("chatMsgText", colorToHex(theme.chatMsgText));
 
         try (java.io.FileOutputStream out = new java.io.FileOutputStream(SETTINGS_FILE)) {
             props.store(out, "Theme Settings");
@@ -703,6 +791,13 @@ public class MainFrame {
             theme.subText = hexToColor(props.getProperty("subText"));
             theme.titleText = hexToColor(props.getProperty("titleText"));
             theme.hintText = hexToColor(props.getProperty("hintText"));
+            theme.sidebarBg = hexToColor(props.getProperty("sidebarBg"));
+            theme.chatPanelBg = hexToColor(props.getProperty("chatPanelBg"));
+            theme.chatAreaBg = hexToColor(props.getProperty("chatAreaBg"));
+            theme.chatMsgSelf = hexToColor(props.getProperty("chatMsgSelf"));
+            theme.chatMsgOther = hexToColor(props.getProperty("chatMsgOther"));
+            theme.chatMsgTime = hexToColor(props.getProperty("chatMsgTime"));
+            theme.chatMsgText = hexToColor(props.getProperty("chatMsgText"));
         } catch (java.io.IOException e) {
             // Dosya yoksa veya okunamazsa varsayılanlarla devam et
         }
@@ -720,6 +815,122 @@ public class MainFrame {
         } catch (Exception e) {
             return Color.BLACK;
         }
+    }
+
+    // === TEMA PRESETS (HCI-Friendly) ===
+    public AppTheme getThemePreset(String presetName) {
+        AppTheme preset = new AppTheme();
+        switch (presetName.toLowerCase()) {
+            case "dark_blue": // Modern Dark Blue - Kullanıcı dostlu, kontrast iyi
+                preset.background = new Color(45, 52, 80);
+                preset.inputBg = new Color(30, 30, 50);
+                preset.inputBorder = new Color(100, 100, 150);
+                preset.buttonColor = new Color(100, 150, 200);
+                preset.subText = new Color(200, 200, 255);
+                preset.sidebarBg = new Color(24, 24, 36);
+                preset.titleText = Color.WHITE;
+                preset.hintText = new Color(160, 160, 200);
+                preset.chatPanelBg = new Color(20, 20, 35);
+                preset.chatAreaBg = new Color(20, 20, 35);
+                preset.chatMsgSelf = new Color(130, 180, 255);
+                preset.chatMsgOther = new Color(130, 220, 160);
+                preset.chatMsgTime = new Color(100, 110, 150);
+                preset.chatMsgText = Color.WHITE;
+                break;
+
+            case "high_contrast": // Yüksek Kontrast - Erişilebilirlik optimized
+                preset.background = new Color(20, 20, 20);
+                preset.inputBg = new Color(40, 40, 40);
+                preset.inputBorder = new Color(200, 200, 200);
+                preset.buttonColor = new Color(0, 100, 200);
+                preset.subText = new Color(220, 220, 220);
+                preset.sidebarBg = new Color(10, 10, 10);
+                preset.titleText = Color.WHITE;
+                preset.hintText = new Color(200, 200, 200);
+                preset.chatPanelBg = new Color(15, 15, 15);
+                preset.chatAreaBg = new Color(15, 15, 15);
+                preset.chatMsgSelf = new Color(100, 200, 255);
+                preset.chatMsgOther = new Color(100, 255, 150);
+                preset.chatMsgTime = new Color(180, 180, 180);
+                preset.chatMsgText = Color.WHITE;
+                break;
+
+            case "warm": // Sıcak Tema - Göz rahat etici, uyumlu renkler
+                preset.background = new Color(50, 45, 40);
+                preset.inputBg = new Color(35, 30, 25);
+                preset.inputBorder = new Color(150, 120, 100);
+                preset.buttonColor = new Color(200, 130, 80);
+                preset.subText = new Color(240, 220, 200);
+                preset.sidebarBg = new Color(30, 25, 20);
+                preset.titleText = new Color(255, 240, 220);
+                preset.hintText = new Color(200, 170, 140);
+                preset.chatPanelBg = new Color(25, 20, 15);
+                preset.chatAreaBg = new Color(25, 20, 15);
+                preset.chatMsgSelf = new Color(220, 150, 100);
+                preset.chatMsgOther = new Color(150, 200, 100);
+                preset.chatMsgTime = new Color(150, 120, 100);
+                preset.chatMsgText = new Color(240, 220, 200);
+                break;
+
+            case "cool": // Soğuk Tema - Profesyonel ve temiz görünüş
+                preset.background = new Color(40, 50, 60);
+                preset.inputBg = new Color(25, 35, 45);
+                preset.inputBorder = new Color(100, 140, 170);
+                preset.buttonColor = new Color(80, 140, 200);
+                preset.subText = new Color(200, 220, 240);
+                preset.sidebarBg = new Color(20, 30, 40);
+                preset.titleText = Color.WHITE;
+                preset.hintText = new Color(150, 170, 190);
+                preset.chatPanelBg = new Color(15, 25, 35);
+                preset.chatAreaBg = new Color(15, 25, 35);
+                preset.chatMsgSelf = new Color(120, 180, 240);
+                preset.chatMsgOther = new Color(120, 240, 180);
+                preset.chatMsgTime = new Color(100, 140, 170);
+                preset.chatMsgText = Color.WHITE;
+                break;
+
+            case "forest": // Orman Teması - Sakin ve doğal renkler
+                preset.background = new Color(50, 60, 50);
+                preset.inputBg = new Color(35, 45, 35);
+                preset.inputBorder = new Color(120, 150, 120);
+                preset.buttonColor = new Color(100, 160, 100);
+                preset.subText = new Color(210, 230, 210);
+                preset.sidebarBg = new Color(30, 40, 30);
+                preset.titleText = new Color(240, 250, 240);
+                preset.hintText = new Color(160, 190, 160);
+                preset.chatPanelBg = new Color(25, 35, 25);
+                preset.chatAreaBg = new Color(25, 35, 25);
+                preset.chatMsgSelf = new Color(120, 200, 120);
+                preset.chatMsgOther = new Color(200, 220, 120);
+                preset.chatMsgTime = new Color(100, 140, 100);
+                preset.chatMsgText = new Color(240, 250, 240);
+                break;
+
+            case "sunset": // Gündoğumu Teması - Sıcak ve yumuşak tonlar
+                preset.background = new Color(55, 40, 35);
+                preset.inputBg = new Color(40, 25, 20);
+                preset.inputBorder = new Color(160, 110, 80);
+                preset.buttonColor = new Color(210, 120, 60);
+                preset.subText = new Color(245, 225, 205);
+                preset.sidebarBg = new Color(35, 20, 15);
+                preset.titleText = new Color(255, 250, 240);
+                preset.hintText = new Color(210, 150, 110);
+                preset.chatPanelBg = new Color(30, 15, 10);
+                preset.chatAreaBg = new Color(30, 15, 10);
+                preset.chatMsgSelf = new Color(255, 160, 80);
+                preset.chatMsgOther = new Color(160, 220, 120);
+                preset.chatMsgTime = new Color(200, 130, 90);
+                preset.chatMsgText = new Color(255, 245, 230);
+                break;
+
+            default: // Dark Blue - Varsayılan
+                preset = getThemePreset("dark_blue");
+        }
+        return preset;
+    }
+
+    public String[] getAvailableThemes() {
+        return new String[] { "Dark Blue", "High Contrast", "Warm", "Cool", "Forest", "Sunset" };
     }
 
     public static void main(String[] args) {

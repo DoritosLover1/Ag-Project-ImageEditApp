@@ -14,7 +14,7 @@ public class CollabServer {
     private Selector selector;
     private ServerSocketChannel serverChannel;
     private volatile boolean running = true;
-    private String serverIp = "0.0.0.0";
+    private String serverIp = "localhost";
 
     public void start() throws IOException {
         java.util.Properties env = new java.util.Properties();
@@ -27,12 +27,18 @@ public class CollabServer {
                 TCP_PORT = Integer.parseInt(env.getProperty("PORT").trim().replace("\"", ""));
             }
         } catch (IOException e) {
-            System.out.println("[SERVER] .env dosyasi bulunamadi, varsayilan IP kullanilacak: " + serverIp);
+            serverIp = "localhost";
         }
 
         selector = Selector.open();
         serverChannel = ServerSocketChannel.open();
-        serverChannel.bind(new InetSocketAddress(serverIp, TCP_PORT));
+        try {
+            serverChannel.bind(new InetSocketAddress(serverIp, TCP_PORT));
+        } catch (IOException e) {
+            serverIp = "localhost";
+            TCP_PORT = 12345;
+            serverChannel.bind(new InetSocketAddress(serverIp, TCP_PORT));
+        }
         serverChannel.configureBlocking(false);
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 

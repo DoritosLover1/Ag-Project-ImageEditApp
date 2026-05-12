@@ -52,7 +52,8 @@ public class ClientNetworkManager {
 
     private void handleMessage(String raw) {
         String[] p = raw.split(NetworkProtocol.SEPARATOR);
-        if (p.length < 4) return;
+        if (p.length < 4)
+            return;
 
         String sender = p[2];
         String command = p[3];
@@ -74,7 +75,6 @@ public class ClientNetworkManager {
             case NetworkProtocol.CMD_CIRCLE:
             case NetworkProtocol.CMD_LINE:
             case NetworkProtocol.CMD_FREEHAND:
-            case NetworkProtocol.CMD_TEXT:
             case NetworkProtocol.CMD_TRIANGLE:
                 canvas.addShapeSilently(DrawShape.fromNetworkProtocol(p), sender);
                 break;
@@ -169,9 +169,9 @@ public class ClientNetworkManager {
     private java.util.function.BiConsumer<String, String> onChatReceived;
 
     public void setOnChatReceived(java.util.function.BiConsumer<String, String> cb) {
-    this.onChatReceived = cb;
+        this.onChatReceived = cb;
     }
-    
+
     public void setOnLoginSuccess(Consumer<String> callback) {
         this.onLoginSuccess = callback;
     }

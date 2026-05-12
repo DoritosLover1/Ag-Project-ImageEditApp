@@ -73,10 +73,10 @@ public class ChatPanel extends JPanel {
         this.onSend = onSend;
 
         setLayout(new BorderLayout(0, 0));
-        
+
         Color panelBg = theme != null ? theme.chatPanelBg : SIDEBAR_BG;
         Color panelBorder = theme != null ? theme.inputBorder : SIDEBAR_BORDER;
-        
+
         setBackground(panelBg);
         setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, panelBorder));
         setPreferredSize(new Dimension(230, 260));
@@ -145,33 +145,33 @@ public class ChatPanel extends JPanel {
     // Tema değişince MainFrame'den çağrılır
     public void updateTheme(MainFrame.AppTheme newTheme) {
         this.theme = newTheme;
-        
+
         // Panel arka planları
         Color panelBg = theme.chatPanelBg;
         Color areaBg = theme.chatAreaBg;
         Color borderColor = theme.inputBorder;
-        
+
         setBackground(panelBg);
         setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, borderColor));
         inputPanel.setBackground(panelBg);
         chatArea.setBackground(areaBg);
-        
+
         JScrollPane scrollPane = (JScrollPane) chatArea.getParent().getParent();
         scrollPane.getViewport().setBackground(areaBg);
         scrollPane.getVerticalScrollBar().setBackground(panelBg);
-        
+
         // Başlık
         titleLabel.setForeground(theme.titleText);
         titleLabel.setBackground(theme.sidebarBg);
         titleLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, borderColor),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-        
+
         applyInputStyle();
         applyButtonTheme(sendButton);
         sendButton.repaint();
         inputPanel.repaint();
-        
+
         // Mesajları yeniden yükle (tema renkleriyle)
         reloadMessages();
         repaint();
@@ -266,10 +266,10 @@ public class ChatPanel extends JPanel {
 
     private void appendMessage(String sender, String message, boolean isSelf) {
         String time = new SimpleDateFormat("HH:mm").format(new Date());
-        
+
         // Mesajı geçmişe kaydet
         messageHistory.add(new ChatMessage(sender, message, time, isSelf, false));
-        
+
         // Mesajı görüntüle
         displayMessage(sender, message, time, isSelf, false);
     }
@@ -277,7 +277,7 @@ public class ChatPanel extends JPanel {
     private void appendSystemMessage(String text) {
         // Sistem mesajını geçmişe kaydet
         messageHistory.add(new ChatMessage("", text, "", false, true));
-        
+
         // Sistem mesajını görüntüle
         displayMessage("", text, "", false, true);
     }
@@ -324,7 +324,7 @@ public class ChatPanel extends JPanel {
     private void reloadMessages() {
         // Chat alanını temizle
         chatArea.setText("");
-        
+
         // Tüm mesajları yeniden görüntüle
         for (ChatMessage msg : messageHistory) {
             displayMessage(msg.sender, msg.message, msg.time, msg.isSelf, msg.isSystem);

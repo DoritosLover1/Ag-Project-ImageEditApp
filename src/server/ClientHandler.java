@@ -28,7 +28,7 @@ public class ClientHandler {
     public void handleRead() throws IOException {
         readBuffer.clear();
         int bytesRead = channel.read(readBuffer);
-        
+
         if (bytesRead == -1) {
             cleanup();
             return;
@@ -51,7 +51,8 @@ public class ClientHandler {
 
     private void handleRawMessage(String raw) {
         String[] p = raw.split(NetworkProtocol.SEPARATOR);
-        if (p.length < 4) return;
+        if (p.length < 4)
+            return;
 
         String command = p[3];
         try {
@@ -67,7 +68,8 @@ public class ClientHandler {
                     }
                     break;
                 case NetworkProtocol.CMD_CREATE_ROOM:
-                    if (nickname == null) return;
+                    if (nickname == null)
+                        return;
                     leaveCurrentRoom();
                     currentRoom = roomManager.createRoom(nickname);
                     currentRoom.addMember(this);
@@ -75,7 +77,8 @@ public class ClientHandler {
                     broadcastUserList();
                     break;
                 case NetworkProtocol.CMD_JOIN_ROOM:
-                    if (nickname == null) return;
+                    if (nickname == null)
+                        return;
                     String code = p[4].trim().toUpperCase();
                     Room room = roomManager.getRoom(code);
                     if (room != null) {
@@ -111,7 +114,6 @@ public class ClientHandler {
                 case NetworkProtocol.CMD_LINE:
                 case NetworkProtocol.CMD_TRIANGLE:
                 case NetworkProtocol.CMD_FREEHAND:
-                case NetworkProtocol.CMD_TEXT:
                     if (currentRoom != null) {
                         DrawShape shape = DrawShape.fromNetworkProtocol(p);
                         currentRoom.addCanvasItem(new CanvasItem(shape, nickname));
@@ -132,7 +134,8 @@ public class ClientHandler {
                     }
                     break;
                 case NetworkProtocol.CMD_CURSOR:
-                    if (currentRoom != null) broadcastToOthers(raw);
+                    if (currentRoom != null)
+                        broadcastToOthers(raw);
                     break;
                 case NetworkProtocol.CMD_DELETE:
                     if (currentRoom != null) {
@@ -150,15 +153,16 @@ public class ClientHandler {
                     if (currentRoom != null && nickname != null) {
                         String chatMsg = p[4].trim();
                         if (!chatMsg.isEmpty()) {
-                        broadcastToAll(raw);
-                        System.out.println("[CHAT] " + nickname + ": " + chatMsg);
-                    }} 
+                            broadcastToAll(raw);
+                            System.out.println("[CHAT] " + nickname + ": " + chatMsg);
+                        }
+                    }
                     break;
-                 }  
-                } catch (Exception ex) {
-              System.err.println("[SERVER] Protocol Error: " + ex.getMessage());
-              }
             }
+        } catch (Exception ex) {
+            System.err.println("[SERVER] Protocol Error: " + ex.getMessage());
+        }
+    }
 
     private String buildItemMessage(CanvasItem item) {
         if (item.getItemType() == CanvasItem.ItemType.SHAPE) {
@@ -181,7 +185,8 @@ public class ClientHandler {
     }
 
     private void broadcastUserList() {
-        if (currentRoom == null) return;
+        if (currentRoom == null)
+            return;
         String listMsg = NetworkProtocol.buildUserList(currentRoom.getMemberNicknames());
         broadcastToAll(listMsg);
     }
@@ -197,14 +202,17 @@ public class ClientHandler {
     }
 
     private void broadcastToOthers(String msg) {
-        if (currentRoom == null) return;
+        if (currentRoom == null)
+            return;
         for (ClientHandler member : currentRoom.getMembers()) {
-            if (member != this) member.send(msg);
+            if (member != this)
+                member.send(msg);
         }
     }
 
     private void broadcastToAll(String msg) {
-        if (currentRoom == null) return;
+        if (currentRoom == null)
+            return;
         for (ClientHandler member : currentRoom.getMembers()) {
             member.send(msg);
         }
@@ -215,7 +223,8 @@ public class ClientHandler {
             leaveCurrentRoom();
             server.removeClient(this);
             channel.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
     }
 
     public String getNickname() {

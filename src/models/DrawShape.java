@@ -1,120 +1,158 @@
 package models;
+
 import network.NetworkProtocol;
 import java.io.Serializable;
+
 public class DrawShape implements Serializable {
     private static final long serialVersionUID = 1L;
+
     public enum ShapeType {
-        RECTANGLE, CIRCLE, LINE, FREEHAND, TEXT, TRIANGLE
+        RECTANGLE, CIRCLE, LINE, FREEHAND, TRIANGLE
     }
+
     private ShapeType shapeType;
     private int x, y, width, height;
-    private int x2, y2; 
-    private int x3, y3; 
-    private int[] freehandXPoints; 
+    private int x2, y2;
+    private int x3, y3;
+    private int[] freehandXPoints;
     private int[] freehandYPoints;
-    private String color; 
+    private String color;
     private int strokeWidth;
     private boolean filled;
-    private String text; 
-    private String id; 
+    private String text;
+    private String id;
+
     public DrawShape() {
     }
+
     public ShapeType getShapeType() {
         return shapeType;
     }
+
     public void setShapeType(ShapeType shapeType) {
         this.shapeType = shapeType;
     }
+
     public int getXOfShape() {
         return x;
     }
+
     public void setXOfShape(int x) {
         this.x = x;
     }
+
     public int getYOfShape() {
         return y;
     }
+
     public void setYOfShape(int y) {
         this.y = y;
     }
+
     public int getWidthOfShape() {
         return width;
     }
+
     public void setWidthOfShape(int width) {
         this.width = width;
     }
+
     public int getHeightOfShape() {
         return height;
     }
+
     public void setHeightOfShape(int height) {
         this.height = height;
     }
+
     public int getX2OfShape() {
         return x2;
     }
+
     public void setX2OfShape(int x2) {
         this.x2 = x2;
     }
+
     public int getY2OfShape() {
         return y2;
     }
+
     public void setY2OfShape(int y2) {
         this.y2 = y2;
     }
+
     public int getX3OfShape() {
         return x3;
     }
+
     public void setX3OfShape(int x3) {
         this.x3 = x3;
     }
+
     public int getY3OfShape() {
         return y3;
     }
+
     public void setY3OfShape(int y3) {
         this.y3 = y3;
     }
+
     public int[] getFreehandXPointsOfShape() {
         return freehandXPoints;
     }
+
     public void setFreehandXPointsOfShape(int[] freehandXPoints) {
         this.freehandXPoints = freehandXPoints;
     }
+
     public int[] getFreehandYPointsOfShape() {
         return freehandYPoints;
     }
+
     public void setFreehandYPointsOfShape(int[] freehandYPoints) {
         this.freehandYPoints = freehandYPoints;
     }
+
     public String getColorOfShape() {
         return color;
     }
+
     public void setColorOfShape(String color) {
         this.color = color;
     }
+
     public int getStrokeWidthOfShape() {
         return strokeWidth;
     }
+
     public void setStrokeWidthOfShape(int strokeWidth) {
         this.strokeWidth = strokeWidth;
     }
+
     public boolean isFilledShape() {
         return filled;
     }
+
     public void setFilledShape(boolean filled) {
         this.filled = filled;
     }
+
     public String getTextOfShape() {
         return text;
     }
+
     public void setTextOfShape(String text) {
         this.text = text;
     }
+
     public String getIdOfShape() {
         return id;
     }
+
     public void setIdOfShape(String id) {
         this.id = id;
     }
+
     public String toNetworkString(String sender) {
         switch (shapeType) {
             case RECTANGLE:
@@ -127,12 +165,11 @@ public class DrawShape implements Serializable {
                 return NetworkProtocol.buildTriangle(sender, x, y, x2, y2, x3, y3, color, strokeWidth, filled, id);
             case FREEHAND:
                 return NetworkProtocol.buildFreehand(sender, freehandXPoints, freehandYPoints, color, strokeWidth, id);
-            case TEXT:
-                return NetworkProtocol.buildText(sender, x, y, text, color, id);
             default:
                 return NetworkProtocol.buildSquare(sender, x, y, width, height, color, strokeWidth, filled, id);
         }
     }
+
     public static DrawShape fromNetworkProtocol(String[] p) {
         String command = p[3];
         DrawShape s = new DrawShape();
@@ -170,13 +207,6 @@ public class DrawShape implements Serializable {
             s.setFreehandYPointsOfShape(iys);
             s.setColorOfShape(p[6]);
             s.setStrokeWidthOfShape(Integer.parseInt(p[7]));
-            s.setIdOfShape(p[8]);
-        } else if (command.equals(NetworkProtocol.CMD_TEXT)) {
-            s.setShapeType(ShapeType.TEXT);
-            s.setXOfShape(Integer.parseInt(p[4]));
-            s.setYOfShape(Integer.parseInt(p[5]));
-            s.setTextOfShape(p[6]);
-            s.setColorOfShape(p[7]);
             s.setIdOfShape(p[8]);
         } else if (command.equals(NetworkProtocol.CMD_TRIANGLE)) {
             s.setShapeType(ShapeType.TRIANGLE);

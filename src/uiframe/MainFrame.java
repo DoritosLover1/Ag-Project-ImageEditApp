@@ -46,6 +46,7 @@ public class MainFrame {
         public Color chatMsgOther = new Color(130, 220, 160);
         public Color chatMsgTime = new Color(100, 110, 150);
         public Color chatMsgText = Color.WHITE;
+        public int themeIndex = 0;
     }
 
     public AppTheme theme = new AppTheme();
@@ -363,13 +364,13 @@ public class MainFrame {
         top.add(hint, BorderLayout.SOUTH);
         sidebar.add(top, BorderLayout.NORTH);
         sidebar.add(itemsBox, BorderLayout.CENTER);
-        
+
         // ChatPanel varsa yeniden oluşturma, yoksa oluştur
         if (chatPanel == null) {
             chatPanel = new ChatPanel(username, theme, message -> {
-             if (networkManager != null) {
-                networkManager.sendRaw(NetworkProtocol.buildChat(username, message));
-             }
+                if (networkManager != null) {
+                    networkManager.sendRaw(NetworkProtocol.buildChat(username, message));
+                }
             });
         }
         sidebar.add(chatPanel, BorderLayout.SOUTH);
@@ -555,10 +556,10 @@ public class MainFrame {
         temp.chatMsgText = theme.chatMsgText;
 
         String[] labels = {
-            "Arka Plan", "Girdi Arka Planı", "Girdi Kenarlık",
-            "Buton Rengi", "Alt Metin", "Başlık Metni", "İpucu Metni",
-            "Kenar Çubuğu", "Sohbet Arka Planı", "Sohbet Alanı", 
-            "Sohbet Mesajım", "Sohbet Diğer", "Sohbet Saati", "Sohbet Metni"
+                "Arka Plan", "Girdi Arka Planı", "Girdi Kenarlık",
+                "Buton Rengi", "Alt Metin", "Başlık Metni", "İpucu Metni",
+                "Kenar Çubuğu", "Sohbet Arka Planı", "Sohbet Alanı",
+                "Sohbet Mesajım", "Sohbet Diğer", "Sohbet Saati", "Sohbet Metni"
         };
         JButton[] colorBtns = new JButton[labels.length];
 
@@ -574,6 +575,7 @@ public class MainFrame {
         JComboBox<String> presetCombo = new JComboBox<>(getAvailableThemes());
         presetCombo.setBackground(theme.inputBg);
         presetCombo.setForeground(theme.titleText);
+        presetCombo.setSelectedIndex(theme.themeIndex);
         presetCombo.addActionListener(e -> {
             String selected = (String) presetCombo.getSelectedItem();
             if (selected != null) {
@@ -592,6 +594,7 @@ public class MainFrame {
                 temp.chatMsgOther = preset.chatMsgOther;
                 temp.chatMsgTime = preset.chatMsgTime;
                 temp.chatMsgText = preset.chatMsgText;
+                temp.themeIndex = preset.themeIndex;
                 // Renk düğmelerini güncelle
                 for (int j = 0; j < colorBtns.length && colorBtns[j] != null; j++) {
                     colorBtns[j].setBackground(getThemeColorByIndex(temp, j));
@@ -648,6 +651,7 @@ public class MainFrame {
             theme.chatMsgOther = temp.chatMsgOther;
             theme.chatMsgTime = temp.chatMsgTime;
             theme.chatMsgText = temp.chatMsgText;
+            theme.themeIndex = presetCombo.getSelectedIndex();
             saveTheme();
             rebuildPanels();
             dialog.dispose();
@@ -701,7 +705,7 @@ public class MainFrame {
             chatPanel = savedChatPanel;
             chatPanel.updateTheme(theme);
         }
-        
+
         cardLayout.show(mainPanel, currentScreen);
         frame.revalidate();
         frame.repaint();
@@ -744,8 +748,8 @@ public class MainFrame {
             }
         });
         networkManager.setOnChatReceived((sender, message) -> {
-             if (chatPanel != null) {
-            chatPanel.receiveMessage(sender, message);
+            if (chatPanel != null) {
+                chatPanel.receiveMessage(sender, message);
             }
         });
     }
@@ -785,7 +789,7 @@ public class MainFrame {
         props.setProperty("chatMsgOther", colorToHex(theme.chatMsgOther));
         props.setProperty("chatMsgTime", colorToHex(theme.chatMsgTime));
         props.setProperty("chatMsgText", colorToHex(theme.chatMsgText));
-
+        props.setProperty("themeIndex", String.valueOf(theme.themeIndex));
         try (java.io.FileOutputStream out = new java.io.FileOutputStream(SETTINGS_FILE)) {
             props.store(out, "Theme Settings");
         } catch (java.io.IOException e) {
@@ -811,6 +815,7 @@ public class MainFrame {
             theme.chatMsgOther = hexToColor(props.getProperty("chatMsgOther"));
             theme.chatMsgTime = hexToColor(props.getProperty("chatMsgTime"));
             theme.chatMsgText = hexToColor(props.getProperty("chatMsgText"));
+            theme.themeIndex = Integer.parseInt(props.getProperty("themeIndex", "0"));
         } catch (java.io.IOException e) {
             // Dosya yoksa veya okunamazsa varsayılanlarla devam et
         }
@@ -849,6 +854,7 @@ public class MainFrame {
                 preset.chatMsgOther = new Color(130, 220, 160);
                 preset.chatMsgTime = new Color(100, 110, 150);
                 preset.chatMsgText = Color.WHITE;
+                preset.themeIndex = 0;
                 break;
 
             case "high_contrast": // Yüksek Kontrast - Erişilebilirlik optimized
@@ -866,6 +872,7 @@ public class MainFrame {
                 preset.chatMsgOther = new Color(100, 255, 150);
                 preset.chatMsgTime = new Color(180, 180, 180);
                 preset.chatMsgText = Color.WHITE;
+                preset.themeIndex = 1;
                 break;
 
             case "warm": // Sıcak Tema - Göz rahat etici, uyumlu renkler
@@ -883,6 +890,7 @@ public class MainFrame {
                 preset.chatMsgOther = new Color(150, 200, 100);
                 preset.chatMsgTime = new Color(150, 120, 100);
                 preset.chatMsgText = new Color(240, 220, 200);
+                preset.themeIndex = 2;
                 break;
 
             case "cool": // Soğuk Tema - Profesyonel ve temiz görünüş
@@ -900,6 +908,7 @@ public class MainFrame {
                 preset.chatMsgOther = new Color(120, 240, 180);
                 preset.chatMsgTime = new Color(100, 140, 170);
                 preset.chatMsgText = Color.WHITE;
+                preset.themeIndex = 3;
                 break;
 
             case "forest": // Orman Teması - Sakin ve doğal renkler
@@ -917,6 +926,7 @@ public class MainFrame {
                 preset.chatMsgOther = new Color(200, 220, 120);
                 preset.chatMsgTime = new Color(100, 140, 100);
                 preset.chatMsgText = new Color(240, 250, 240);
+                preset.themeIndex = 4;
                 break;
 
             case "sunset": // Gündoğumu Teması - Sıcak ve yumuşak tonlar
@@ -934,10 +944,8 @@ public class MainFrame {
                 preset.chatMsgOther = new Color(160, 220, 120);
                 preset.chatMsgTime = new Color(200, 130, 90);
                 preset.chatMsgText = new Color(255, 245, 230);
+                preset.themeIndex = 5;
                 break;
-
-            default: // Dark Blue - Varsayılan
-                preset = getThemePreset("dark_blue");
         }
         return preset;
     }

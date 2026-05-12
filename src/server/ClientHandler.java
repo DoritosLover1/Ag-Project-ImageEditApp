@@ -1,14 +1,13 @@
 package server;
 
-import models.CanvasItem;
-import models.DrawShape;
-import models.PastedImage;
-import network.NetworkProtocol;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import models.CanvasItem;
+import models.DrawShape;
+import models.PastedImage;
+import network.NetworkProtocol;
 
 public class ClientHandler {
     private final SocketChannel channel;
@@ -90,6 +89,10 @@ public class ClientHandler {
                         for (CanvasItem item : currentRoom.getCanvasSnapshot()) {
                             send(buildItemMessage(item));
                         }
+                        // Chat geçmişini gönder
+                        for (Room.ChatMessage chatMsg : currentRoom.getChatMessages()) {
+                            send(NetworkProtocol.buildChatHistory(chatMsg.sender, chatMsg.message, chatMsg.timestamp));
+                        }
                     } else {
                         send(NetworkProtocol.buildError("Room not found."));
                     }
@@ -153,6 +156,7 @@ public class ClientHandler {
                     if (currentRoom != null && nickname != null) {
                         String chatMsg = p[4].trim();
                         if (!chatMsg.isEmpty()) {
+                            currentRoom.addChatMessage(nickname, chatMsg);
                             broadcastToAll(raw);
                             System.out.println("[CHAT] " + nickname + ": " + chatMsg);
                         }

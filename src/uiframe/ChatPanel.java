@@ -10,7 +10,6 @@ import java.awt.event.FocusEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.function.Consumer;
-
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -264,6 +263,13 @@ public class ChatPanel extends JPanel {
         });
     }
 
+    public void receiveHistoryMessage(String sender, String message, long timestamp) {
+        SwingUtilities.invokeLater(() -> {
+            String time = new SimpleDateFormat("HH:mm").format(new Date(timestamp));
+            appendHistoryMessage(sender, message, time, sender.equals(localUsername));
+        });
+    }
+
     private void appendMessage(String sender, String message, boolean isSelf) {
         String time = new SimpleDateFormat("HH:mm").format(new Date());
 
@@ -271,6 +277,11 @@ public class ChatPanel extends JPanel {
         messageHistory.add(new ChatMessage(sender, message, time, isSelf, false));
 
         // Mesajı görüntüle
+        displayMessage(sender, message, time, isSelf, false);
+    }
+
+    private void appendHistoryMessage(String sender, String message, String time, boolean isSelf) {
+        // Geçmiş mesajları messageHistory'ye ekleme (çünkü bunlar zaten geçmiş)
         displayMessage(sender, message, time, isSelf, false);
     }
 

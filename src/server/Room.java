@@ -1,16 +1,32 @@
 package server;
-import models.CanvasItem;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import models.CanvasItem;
+
 public class Room {
     private final String code;
     private final String ownerNickname;
     private final List<ClientHandler> members = new CopyOnWriteArrayList<>();
     private final List<CanvasItem> canvasItems = Collections.synchronizedList(new ArrayList<>());
+    private final List<ChatMessage> chatMessages = Collections.synchronizedList(new ArrayList<>());
     private static final String SAVE_DIR = "saved_canvases/";
+
+    // Chat mesajı sınıfı
+    public static class ChatMessage implements Serializable {
+        private static final long serialVersionUID = 1L;
+        public final String sender;
+        public final String message;
+        public final long timestamp;
+
+        public ChatMessage(String sender, String message, long timestamp) {
+            this.sender = sender;
+            this.message = message;
+            this.timestamp = timestamp;
+        }
+    }
     public Room(String code, String ownerNickname) {
         this.code = code;
         this.ownerNickname = ownerNickname;
@@ -55,6 +71,18 @@ public class Room {
             return new ArrayList<>(canvasItems);
         }
     }
+    public void addChatMessage(String sender, String message) {
+        ChatMessage chatMsg = new ChatMessage(sender, message, System.currentTimeMillis());
+        chatMessages.add(chatMsg);
+        // Chat mesajlarını da kaydetmek için saveToFile'ı çağırabiliriz ama şimdilik sadece bellekte tutalım
+    }
+
+    public List<ChatMessage> getChatMessages() {
+        synchronized (chatMessages) {
+            return new ArrayList<>(chatMessages);
+        }
+    }
+
     public List<String> getMemberNicknames() {
         List<String> nicks = new ArrayList<>();
         for (ClientHandler h : members) {

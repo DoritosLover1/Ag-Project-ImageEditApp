@@ -1,12 +1,12 @@
 package network;
 
-import models.*;
-import uiframe.DrawingCanvas;
 import java.io.*;
 import java.net.Socket;
+import java.util.*;
 import java.util.function.Consumer;
 import javax.swing.SwingUtilities;
-import java.util.*;
+import models.*;
+import uiframe.DrawingCanvas;
 
 public class ClientNetworkManager {
     private Socket socket;
@@ -57,9 +57,10 @@ public class ClientNetworkManager {
 
         String sender = p[2];
         String command = p[3];
+        String data = extractData(raw);
 
         if (command.equals(NetworkProtocol.CMD_LOGIN_SUCCESS)) {
-            String nick = p.length > 4 ? p[4] : username;
+            String nick = !data.isEmpty() ? data : username;
             if (onLoginSuccess != null) {
                 onLoginSuccess.accept(nick);
             }
@@ -104,22 +105,34 @@ public class ClientNetworkManager {
                 break;
             case NetworkProtocol.CMD_USER_LIST:
                 if (onUserListUpdated != null) {
-                    String[] users = p[4].split(",");
+                    String[] users = data.split(",");
                     onUserListUpdated.accept(java.util.Arrays.asList(users));
                 }
                 break;
             case NetworkProtocol.CMD_ERROR:
                 if (onError != null)
-                    onError.accept(p[4]);
+                    onError.accept(data);
                 break;
             case NetworkProtocol.CMD_NAME_CHANGED:
-                this.username = p[4];
+                this.username = data;
                 if (onNameChanged != null)
-                    onNameChanged.accept(p[4]);
+                    onNameChanged.accept(data);
                 break;
             case NetworkProtocol.CMD_CHAT:
                 if (onChatReceived != null) {
-                    onChatReceived.accept(sender, p[4]);
+                    onChatReceived.accept(sender, data);
+                }
+                break;
+            case NetworkProtocol.CMD_CHAT_HISTORY:
+                if (onChatHistoryReceived != null) {
+                    String[] parts = data.split("\\|", 3);
+                    if (parts.length >= 3) {
+                        String historySender = parts[0];
+                        String encodedMsg = parts[1];
+                        String historyMessage = new String(java.util.Base64.getDecoder().decode(encodedMsg), java.nio.charset.StandardCharsets.UTF_8);
+                        long historyTimestamp = Long.parseLong(parts[2]);
+                        onChatHistoryReceived.accept(historySender, historyMessage, historyTimestamp);
+                    }
                 }
                 break;
         }
@@ -167,9 +180,27 @@ public class ClientNetworkManager {
     }
 
     private java.util.function.BiConsumer<String, String> onChatReceived;
+    private TriConsumer<String, String, Long> onChatHistoryReceived;
 
     public void setOnChatReceived(java.util.function.BiConsumer<String, String> cb) {
         this.onChatReceived = cb;
+    }
+
+    public void setOnChatHistoryReceived(TriConsumer<String, String, Long> cb) {
+        this.onChatHistoryReceived = cb;
+    }
+
+    private String extractData(String raw) {
+        int separatorCount = 0;
+        for (int i = 0; i < raw.length(); i++) {
+            if (raw.charAt(i) == '|') {
+                separatorCount++;
+                if (separatorCount == 4) {
+                    return raw.substring(i + 1);
+                }
+            }
+        }
+        return "";
     }
 
     public void setOnLoginSuccess(Consumer<String> callback) {

@@ -1,12 +1,12 @@
 package uiframe;
 
-import javax.swing.*;
-import javax.swing.border.*;
+import customelements.CustomButton;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import javax.swing.*;
+import javax.swing.border.*;
 import models.*;
 import network.*;
-import customelements.CustomButton;
 
 public class MainFrame {
     JFrame frame;
@@ -750,6 +750,11 @@ public class MainFrame {
         networkManager.setOnChatReceived((sender, message) -> {
             if (chatPanel != null) {
                 chatPanel.receiveMessage(sender, message);
+            }
+        });
+        networkManager.setOnChatHistoryReceived((sender, message, timestamp) -> {
+            if (chatPanel != null) {
+                chatPanel.receiveHistoryMessage(sender, message, timestamp);
             }
         });
     }

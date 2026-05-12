@@ -1,8 +1,8 @@
 package network;
 
 import java.util.Base64;
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
 
 public class NetworkProtocol {
     public static final String SEPARATOR = "\\|";
@@ -27,6 +27,7 @@ public class NetworkProtocol {
     public static final String CMD_NAME_CHANGED = "NAME_CHANGED";
     public static final String CMD_LOGIN_SUCCESS = "LOGIN_SUCCESS";
     public static final String CMD_CHAT = "CHAT";
+    public static final String CMD_CHAT_HISTORY = "CHAT_HISTORY";
 
     private static String buildBase(String sender, String command, String data) {
         String id = UUID.randomUUID().toString().substring(0, 8);
@@ -120,6 +121,12 @@ public class NetworkProtocol {
 
     public static String buildChat(String sender, String message) {
         return buildBase(sender, CMD_CHAT, message);
+    }
+
+    public static String buildChatHistory(String sender, String message, long timestamp) {
+        String encodedMsg = Base64.getEncoder().encodeToString(message.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String data = sender + "|" + encodedMsg + "|" + timestamp;
+        return buildBase("SERVER", "CHAT_HISTORY", data);
     }
 
     public static String buildCursor(String sender, int x, int y, String color) {

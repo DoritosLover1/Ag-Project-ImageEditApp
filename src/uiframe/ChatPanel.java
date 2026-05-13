@@ -180,6 +180,14 @@ public class ChatPanel extends JPanel {
         this.localUsername = username != null ? username : "Sen";
     }
 
+    public void clearMessages() {
+        SwingUtilities.invokeLater(() -> {
+            messageHistory.clear();
+            chatArea.setText("");
+            appendSystemMessage("Odaya bağlandınız. Sohbet temizlendi.");
+        });
+    }
+
     // --- Input stil uygula (tema renklerini kullan, sidebar sabitlerini fallback
     // yap) ---
     private void applyInputStyle() {
@@ -281,7 +289,8 @@ public class ChatPanel extends JPanel {
     }
 
     private void appendHistoryMessage(String sender, String message, String time, boolean isSelf) {
-        // Geçmiş mesajları messageHistory'ye ekleme (çünkü bunlar zaten geçmiş)
+        // Geçmiş mesajları da messageHistory'ye ekliyoruz ki tema değişince kaybolmasınlar
+        messageHistory.add(new ChatMessage(sender, message, time, isSelf, false));
         displayMessage(sender, message, time, isSelf, false);
     }
 

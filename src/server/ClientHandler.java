@@ -2,6 +2,7 @@ package server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import models.CanvasItem;
@@ -16,6 +17,7 @@ public class ClientHandler {
     private String nickname;
     private Room currentRoom;
     private final StringBuilder buffer = new StringBuilder();
+    private final java.util.Queue<java.nio.ByteBuffer> writeQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
     private final ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 
     public ClientHandler(SocketChannel channel, RoomManager roomManager, CollabServer server) {
@@ -196,12 +198,39 @@ public class ClientHandler {
     }
 
     public void send(String msg) {
-        if (channel.isOpen()) {
-            try {
-                channel.write(ByteBuffer.wrap((msg + "\n").getBytes(StandardCharsets.UTF_8)));
-            } catch (IOException e) {
-                cleanup();
+        if (!channel.isOpen())
+            return;
+        byte[] bytes = (msg + "\n").getBytes(StandardCharsets.UTF_8);
+        writeQueue.add(ByteBuffer.wrap(bytes));
+
+        // Selector'a bu kanalın yazmak istediğini bildir
+        SelectionKey key = channel.keyFor(server.getSelector());
+        if (key != null && key.isValid()) {
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+            server.getSelector().wakeup(); // Selector'ı hemen uyandır ki OP_WRITE'ı fark etsin
+        }
+    }
+
+    public void handleWrite() throws IOException {
+        while (!writeQueue.isEmpty()) {
+            ByteBuffer bb = writeQueue.peek();
+            int written = channel.write(bb);
+            if (written == 0) {
+                // Socket tamponu doldu, sonraki OP_WRITE event'ini bekle
+                return;
             }
+            if (!bb.hasRemaining()) {
+                writeQueue.poll(); // Bu parça bitti, kuyruktan çıkar
+            } else {
+                // Parçalı yazıldısa da bekle
+                return;
+            }
+        }
+
+        // Kuyruk tamamen boşaldıysa OP_WRITE ilgisini kapat
+        SelectionKey key = channel.keyFor(server.getSelector());
+        if (key != null && key.isValid()) {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
         }
     }
 

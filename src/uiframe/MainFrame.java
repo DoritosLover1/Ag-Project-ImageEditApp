@@ -94,6 +94,8 @@ public class MainFrame {
         roomCodeLabel.setText("Oda Kodu: " + myRoomCode);
         canvas.setUsername(username);
         canvas.setCursorColor(cursorColor);
+        if (chatPanel != null)
+            chatPanel.setUsername(username);
         cardLayout.show(mainPanel, "CANVAS");
         frame.setMinimumSize(CANVAS_MIN_SIZE);
         resizeFrame(null, true);
@@ -201,6 +203,9 @@ public class MainFrame {
                 });
                 networkManager.setOnLoginSuccess(nick -> {
                     this.username = nick;
+                    networkManager.setUsername(nick);
+                    if (chatPanel != null)
+                        chatPanel.setUsername(nick);
                     goLobby();
                 });
                 networkManager.setOnNameChanged(newNick -> {
@@ -208,6 +213,8 @@ public class MainFrame {
                     lobbyUsernameLabel.setText("Merhaba, Ressam(!) " + this.username);
                     if (canvas != null)
                         canvas.setUsername(this.username);
+                    if (chatPanel != null)
+                        chatPanel.setUsername(this.username);
                     JOptionPane.showMessageDialog(frame, "Adınız başarıyla değiştirildi: " + newNick);
                 });
                 setupNetworkHooks();
@@ -512,6 +519,8 @@ public class MainFrame {
             if (itemListModel != null)
                 itemListModel.clear();
             canvas.clearCanvas();
+            if (chatPanel != null)
+                chatPanel.clearMessages();
             goLobby();
         });
         right.add(settingsBtn);

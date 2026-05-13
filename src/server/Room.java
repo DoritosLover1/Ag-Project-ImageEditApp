@@ -74,7 +74,7 @@ public class Room {
     public void addChatMessage(String sender, String message) {
         ChatMessage chatMsg = new ChatMessage(sender, message, System.currentTimeMillis());
         chatMessages.add(chatMsg);
-        // Chat mesajlarını da kaydetmek için saveToFile'ı çağırabiliriz ama şimdilik sadece bellekte tutalım
+        saveToFile(); // Mesajları da kaydedelim
     }
 
     public List<ChatMessage> getChatMessages() {
@@ -101,6 +101,9 @@ public class Room {
                 synchronized (canvasItems) {
                     oos.writeObject(new ArrayList<>(canvasItems));
                 }
+                synchronized (chatMessages) {
+                    oos.writeObject(new ArrayList<>(chatMessages));
+                }
             }
         } catch (IOException e) {
             System.err.println("[SAVE] Failed to save room " + code + ": " + e.getMessage());
@@ -113,12 +116,25 @@ public class Room {
             return;
         try (ObjectInputStream ois = new ObjectInputStream(
                 new FileInputStream(file))) {
-            List<CanvasItem> loaded = (List<CanvasItem>) ois.readObject();
+            List<CanvasItem> loadedItems = (List<CanvasItem>) ois.readObject();
             synchronized (canvasItems) {
                 canvasItems.clear();
-                canvasItems.addAll(loaded);
+                canvasItems.addAll(loadedItems);
             }
-            System.out.println("[SAVE] Loaded " + loaded.size() + " items for room " + code);
+            
+            // Chat mesajlarını oku (eğer varsa)
+            try {
+                List<ChatMessage> loadedChat = (List<ChatMessage>) ois.readObject();
+                synchronized (chatMessages) {
+                    chatMessages.clear();
+                    chatMessages.addAll(loadedChat);
+                }
+                System.out.println("[SAVE] Loaded " + loadedItems.size() + " items and " + loadedChat.size() + " messages for room " + code);
+            } catch (EOFException e) {
+                // Eski dosyalar chat mesajı içermeyebilir
+                System.out.println("[SAVE] Loaded " + loadedItems.size() + " items for room " + code + " (no chat history)");
+            }
+            
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("[SAVE] Failed to load room " + code + ": " + e.getMessage());
         }

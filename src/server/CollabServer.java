@@ -67,6 +67,8 @@ public class CollabServer {
                     handleAccept(key);
                 } else if (key.isReadable()) {
                     handleRead(key);
+                } else if (key.isWritable()) {
+                    handleWrite(key);
                 }
             }
         }
@@ -94,6 +96,16 @@ public class CollabServer {
         }
     }
 
+    private void handleWrite(SelectionKey key) {
+        ClientHandler handler = (ClientHandler) key.attachment();
+        try {
+            handler.handleWrite();
+        } catch (IOException e) {
+            System.err.println("[SERVER] Write error: " + e.getMessage());
+            handler.cleanup();
+        }
+    }
+
     public boolean isNicknameTaken(String nickname) {
         if (nickname == null || nickname.trim().isEmpty())
             return true;
@@ -109,6 +121,10 @@ public class CollabServer {
 
     public void removeClient(ClientHandler handler) {
         activeClients.remove(handler);
+    }
+
+    public Selector getSelector() {
+        return selector;
     }
 
     public static void main(String[] args) throws IOException {

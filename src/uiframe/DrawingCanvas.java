@@ -600,6 +600,7 @@ public class DrawingCanvas extends JPanel {
     }
 
     public void addRemoteShape(DrawShape shape, String sender) {
+        if (shape == null || hasItemWithId(shape.getIdOfShape())) return;
         items.add(new CanvasItem(shape, sender));
         SwingUtilities.invokeLater(() -> {
             repaint();
@@ -607,7 +608,16 @@ public class DrawingCanvas extends JPanel {
         });
     }
 
+    private boolean hasItemWithId(String id) {
+        if (id == null) return false;
+        for (CanvasItem item : items) {
+            if (id.equals(item.getIdOfImage())) return true;
+        }
+        return false;
+    }
+
     public void addRemoteImage(PastedImage image, String sender) {
+        if (image == null || hasItemWithId(image.getIdOfImage())) return;
         items.add(new CanvasItem(image, sender));
         SwingUtilities.invokeLater(() -> {
             repaint();
@@ -761,6 +771,7 @@ public class DrawingCanvas extends JPanel {
     }
 
     public void addShapeSilently(DrawShape shape, String sender) {
+        if (shape == null || hasItemWithId(shape.getIdOfShape())) return;
         items.add(new CanvasItem(shape, sender));
         SwingUtilities.invokeLater(this::repaint);
     }

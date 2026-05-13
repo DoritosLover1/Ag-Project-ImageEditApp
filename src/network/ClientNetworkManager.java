@@ -70,10 +70,6 @@ public class ClientNetworkManager {
             return;
         }
 
-        if (!sender.equals("SERVER") && sender.equals(username) && !command.equals(NetworkProtocol.CMD_CLEAR)) {
-            return;
-        }
-
         switch (command) {
             case NetworkProtocol.CMD_SQUARE:
             case NetworkProtocol.CMD_CIRCLE:
@@ -103,6 +99,10 @@ public class ClientNetworkManager {
                 canvas.addRemoteImage(img, sender);
                 break;
             case NetworkProtocol.CMD_ROOM_INFO:
+                if (canvas != null)
+                    canvas.clearCanvas();
+                if (chatPanel != null)
+                    chatPanel.clearMessages();
                 if (onRoomJoined != null)
                     onRoomJoined.accept(p[4]);
                 break;

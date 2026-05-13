@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import javax.swing.SwingUtilities;
 import models.*;
 import uiframe.DrawingCanvas;
+import uiframe.ChatPanel;
 
 public class ClientNetworkManager {
     private Socket socket;
@@ -14,6 +15,7 @@ public class ClientNetworkManager {
     private BufferedReader in;
     private String username;
     private DrawingCanvas canvas;
+    private ChatPanel chatPanel;
     private Consumer<String> onRoomJoined;
     private Consumer<List<String>> onUserListUpdated;
     private Consumer<String> onError;
@@ -23,11 +25,12 @@ public class ClientNetworkManager {
     private String host;
     private int port;
 
-    public ClientNetworkManager(String host, int port, String username, DrawingCanvas canvas) {
+    public ClientNetworkManager(String host, int port, String username, DrawingCanvas canvas, ChatPanel chatPanel) {
         this.host = host;
         this.port = port;
         this.username = username;
         this.canvas = canvas;
+        this.chatPanel = chatPanel;
     }
 
     public void connect() {
@@ -119,19 +122,20 @@ public class ClientNetworkManager {
                     onNameChanged.accept(data);
                 break;
             case NetworkProtocol.CMD_CHAT:
-                if (onChatReceived != null) {
-                    onChatReceived.accept(sender, data);
+                if (chatPanel != null) {
+                    chatPanel.receiveMessage(sender, data);
                 }
                 break;
             case NetworkProtocol.CMD_CHAT_HISTORY:
-                if (onChatHistoryReceived != null) {
+                if (chatPanel != null) {
                     String[] parts = data.split("\\|", 3);
                     if (parts.length >= 3) {
                         String historySender = parts[0];
                         String encodedMsg = parts[1];
-                        String historyMessage = new String(java.util.Base64.getDecoder().decode(encodedMsg), java.nio.charset.StandardCharsets.UTF_8);
+                        String historyMessage = new String(java.util.Base64.getDecoder().decode(encodedMsg),
+                                java.nio.charset.StandardCharsets.UTF_8);
                         long historyTimestamp = Long.parseLong(parts[2]);
-                        onChatHistoryReceived.accept(historySender, historyMessage, historyTimestamp);
+                        chatPanel.receiveHistoryMessage(historySender, historyMessage, historyTimestamp);
                     }
                 }
                 break;
@@ -179,15 +183,8 @@ public class ClientNetworkManager {
         this.onNameChanged = callback;
     }
 
-    private java.util.function.BiConsumer<String, String> onChatReceived;
-    private TriConsumer<String, String, Long> onChatHistoryReceived;
-
-    public void setOnChatReceived(java.util.function.BiConsumer<String, String> cb) {
-        this.onChatReceived = cb;
-    }
-
-    public void setOnChatHistoryReceived(TriConsumer<String, String, Long> cb) {
-        this.onChatHistoryReceived = cb;
+    public void setChatPanel(ChatPanel chatPanel) {
+        this.chatPanel = chatPanel;
     }
 
     private String extractData(String raw) {

@@ -179,7 +179,7 @@ public class MainFrame {
                 }
             }
             try {
-                this.networkManager = new ClientNetworkManager(ip, port, username, canvas);
+                this.networkManager = new ClientNetworkManager(ip, port, username, canvas, chatPanel);
                 networkManager.setOnRoomJoined(code -> {
                     this.myRoomCode = code;
                     goCanvas();
@@ -747,16 +747,7 @@ public class MainFrame {
                 networkManager.sendRaw(NetworkProtocol.buildDelete(username, id));
             }
         });
-        networkManager.setOnChatReceived((sender, message) -> {
-            if (chatPanel != null) {
-                chatPanel.receiveMessage(sender, message);
-            }
-        });
-        networkManager.setOnChatHistoryReceived((sender, message, timestamp) -> {
-            if (chatPanel != null) {
-                chatPanel.receiveHistoryMessage(sender, message, timestamp);
-            }
-        });
+
     }
 
     private void setThemeColorByIndex(AppTheme t, int idx, Color c) {

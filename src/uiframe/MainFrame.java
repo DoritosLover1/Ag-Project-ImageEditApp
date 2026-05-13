@@ -197,6 +197,9 @@ public class MainFrame {
                             }
                         }
                     }
+                    if (canvas != null) {
+                        canvas.syncCursors(users);
+                    }
                 });
                 networkManager.setOnError(msg -> {
                     JOptionPane.showMessageDialog(frame, "Sunucu Hatası: " + msg);

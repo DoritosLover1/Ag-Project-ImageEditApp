@@ -647,6 +647,13 @@ public class DrawingCanvas extends JPanel {
         SwingUtilities.invokeLater(this::repaint);
     }
 
+    public void syncCursors(java.util.List<String> activeNicknames) {
+        synchronized (remoteCursors) {
+            remoteCursors.keySet().removeIf(nick -> !activeNicknames.contains(nick));
+        }
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
     public void loadCanvasState(List<CanvasItem> snapshot) {
         items.clear();
         items.addAll(snapshot);
@@ -659,6 +666,9 @@ public class DrawingCanvas extends JPanel {
 
     public void clearCanvas() {
         items.clear();
+        synchronized (remoteCursors) {
+            remoteCursors.clear();
+        }
         selectionRect = null;
         SwingUtilities.invokeLater(() -> {
             repaint();

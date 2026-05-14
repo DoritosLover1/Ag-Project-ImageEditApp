@@ -1,4 +1,5 @@
 package server;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,7 +15,6 @@ public class Room {
     private final List<ChatMessage> chatMessages = Collections.synchronizedList(new ArrayList<>());
     private static final String SAVE_DIR = "saved_canvases/";
 
-    // Chat mesajı sınıfı
     public static class ChatMessage implements Serializable {
         private static final long serialVersionUID = 1L;
         public final String sender;
@@ -27,37 +27,47 @@ public class Room {
             this.timestamp = timestamp;
         }
     }
+
     public Room(String code, String ownerNickname) {
         this.code = code;
         this.ownerNickname = ownerNickname;
         loadFromFile();
     }
+
     public String getCode() {
         return code;
     }
+
     public String getOwnerNickname() {
         return ownerNickname;
     }
+
     public void addMember(ClientHandler handler) {
         members.add(handler);
     }
+
     public void removeMember(ClientHandler handler) {
         members.remove(handler);
     }
+
     public List<ClientHandler> getMembers() {
         return members;
     }
+
     public boolean isEmpty() {
         return members.isEmpty();
     }
+
     public void addCanvasItem(CanvasItem item) {
         canvasItems.add(item);
         saveToFile();
     }
+
     public void clearCanvas() {
         canvasItems.clear();
         saveToFile();
     }
+
     public void removeCanvasItemById(String id) {
         if (id == null)
             return;
@@ -66,15 +76,17 @@ public class Room {
         }
         saveToFile();
     }
+
     public List<CanvasItem> getCanvasSnapshot() {
         synchronized (canvasItems) {
             return new ArrayList<>(canvasItems);
         }
     }
+
     public void addChatMessage(String sender, String message) {
         ChatMessage chatMsg = new ChatMessage(sender, message, System.currentTimeMillis());
         chatMessages.add(chatMsg);
-        saveToFile(); // Mesajları da kaydedelim
+        saveToFile();
     }
 
     public List<ChatMessage> getChatMessages() {
@@ -91,6 +103,7 @@ public class Room {
         }
         return nicks;
     }
+
     private void saveToFile() {
         try {
             File dir = new File(SAVE_DIR);
@@ -109,6 +122,7 @@ public class Room {
             System.err.println("[SAVE] Failed to save room " + code + ": " + e.getMessage());
         }
     }
+
     @SuppressWarnings("unchecked")
     private void loadFromFile() {
         File file = new File(SAVE_DIR + code + ".canvas");
@@ -121,20 +135,20 @@ public class Room {
                 canvasItems.clear();
                 canvasItems.addAll(loadedItems);
             }
-            
-            // Chat mesajlarını oku (eğer varsa)
+
             try {
                 List<ChatMessage> loadedChat = (List<ChatMessage>) ois.readObject();
                 synchronized (chatMessages) {
                     chatMessages.clear();
                     chatMessages.addAll(loadedChat);
                 }
-                System.out.println("[SAVE] Loaded " + loadedItems.size() + " items and " + loadedChat.size() + " messages for room " + code);
+                System.out.println("[SAVE] Loaded " + loadedItems.size() + " items and " + loadedChat.size()
+                        + " messages for room " + code);
             } catch (EOFException e) {
-                // Eski dosyalar chat mesajı içermeyebilir
-                System.out.println("[SAVE] Loaded " + loadedItems.size() + " items for room " + code + " (no chat history)");
+                System.out.println(
+                        "[SAVE] Loaded " + loadedItems.size() + " items for room " + code + " (no chat history)");
             }
-            
+
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("[SAVE] Failed to load room " + code + ": " + e.getMessage());
         }

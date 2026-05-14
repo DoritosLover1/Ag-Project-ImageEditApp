@@ -26,7 +26,6 @@ import javax.swing.text.StyledDocument;
 
 public class ChatPanel extends JPanel {
 
-    // Mesaj verisi sınıfı
     private static class ChatMessage {
         final String sender;
         final String message;
@@ -52,10 +51,8 @@ public class ChatPanel extends JPanel {
     private final Consumer<String> onSend;
     private final java.util.List<ChatMessage> messageHistory = new java.util.ArrayList<>();
 
-    // Tema referansı — MainFrame.AppTheme
     private MainFrame.AppTheme theme;
 
-    // Sidebar sabit renkleri (tema değişmez olanlar)
     private static final Color SIDEBAR_BG = new Color(24, 24, 36);
     private static final Color SIDEBAR_PANEL = new Color(20, 20, 35);
     private static final Color SIDEBAR_TITLE_BG = new Color(30, 30, 50);
@@ -81,7 +78,6 @@ public class ChatPanel extends JPanel {
         setPreferredSize(new Dimension(230, 260));
         setMinimumSize(new Dimension(230, 100));
 
-        // --- Başlık ---
         titleLabel = new JLabel("Mesajlaşma");
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
         Color titleFg = theme != null ? theme.titleText : SIDEBAR_HEADER;
@@ -94,7 +90,6 @@ public class ChatPanel extends JPanel {
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         add(titleLabel, BorderLayout.NORTH);
 
-        // --- Sohbet Alanı ---
         chatArea = new JTextPane();
         chatArea.setEditable(false);
         Color areaBg = theme != null ? theme.chatAreaBg : SIDEBAR_PANEL;
@@ -108,7 +103,6 @@ public class ChatPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
         add(scrollPane, BorderLayout.CENTER);
 
-        // --- Giriş Alanı ---
         inputPanel = new JPanel(new BorderLayout(4, 0));
         inputPanel.setBackground(panelBg);
         inputPanel.setBorder(new EmptyBorder(5, 6, 6, 6));
@@ -129,23 +123,19 @@ public class ChatPanel extends JPanel {
         inputPanel.add(sendButton, BorderLayout.EAST);
         add(inputPanel, BorderLayout.SOUTH);
 
-        // --- Olaylar ---
         sendButton.addActionListener(e -> sendMessage());
         inputField.addActionListener(e -> sendMessage());
 
         appendSystemMessage("Sohbete katıldınız 👋");
     }
 
-    // Geriye dönük uyumluluk — theme olmadan da çalışsın
     public ChatPanel(String localUsername, Consumer<String> onSend) {
         this(localUsername, null, onSend);
     }
 
-    // Tema değişince MainFrame'den çağrılır
     public void updateTheme(MainFrame.AppTheme newTheme) {
         this.theme = newTheme;
 
-        // Panel arka planları
         Color panelBg = theme.chatPanelBg;
         Color areaBg = theme.chatAreaBg;
         Color borderColor = theme.inputBorder;
@@ -159,7 +149,6 @@ public class ChatPanel extends JPanel {
         scrollPane.getViewport().setBackground(areaBg);
         scrollPane.getVerticalScrollBar().setBackground(panelBg);
 
-        // Başlık
         titleLabel.setForeground(theme.titleText);
         titleLabel.setBackground(theme.sidebarBg);
         titleLabel.setBorder(BorderFactory.createCompoundBorder(
@@ -171,7 +160,6 @@ public class ChatPanel extends JPanel {
         sendButton.repaint();
         inputPanel.repaint();
 
-        // Mesajları yeniden yükle (tema renkleriyle)
         reloadMessages();
         repaint();
     }
@@ -188,8 +176,6 @@ public class ChatPanel extends JPanel {
         });
     }
 
-    // --- Input stil uygula (tema renklerini kullan, sidebar sabitlerini fallback
-    // yap) ---
     private void applyInputStyle() {
         Color bg = theme != null ? theme.inputBg : new Color(30, 30, 48);
         Color border = theme != null ? theme.inputBorder : SIDEBAR_BORDER;
@@ -208,11 +194,11 @@ public class ChatPanel extends JPanel {
         JButton btn = new JButton("Gönder");
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
-        btn.setContentAreaFilled(true); // true yap
+        btn.setContentAreaFilled(true);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setFont(new Font("SansSerif", Font.BOLD, 11));
         btn.setForeground(Color.WHITE);
-        applyButtonTheme(btn); // tema rengini uygula
+        applyButtonTheme(btn);
         return btn;
     }
 
@@ -281,24 +267,19 @@ public class ChatPanel extends JPanel {
     private void appendMessage(String sender, String message, boolean isSelf) {
         String time = new SimpleDateFormat("HH:mm").format(new Date());
 
-        // Mesajı geçmişe kaydet
         messageHistory.add(new ChatMessage(sender, message, time, isSelf, false));
 
-        // Mesajı görüntüle
         displayMessage(sender, message, time, isSelf, false);
     }
 
     private void appendHistoryMessage(String sender, String message, String time, boolean isSelf) {
-        // Geçmiş mesajları da messageHistory'ye ekliyoruz ki tema değişince kaybolmasınlar
         messageHistory.add(new ChatMessage(sender, message, time, isSelf, false));
         displayMessage(sender, message, time, isSelf, false);
     }
 
     private void appendSystemMessage(String text) {
-        // Sistem mesajını geçmişe kaydet
         messageHistory.add(new ChatMessage("", text, "", false, true));
 
-        // Sistem mesajını görüntüle
         displayMessage("", text, "", false, true);
     }
 
@@ -340,12 +321,9 @@ public class ChatPanel extends JPanel {
         }
     }
 
-    // Tema değişince mesajları yeniden yükle
     private void reloadMessages() {
-        // Chat alanını temizle
         chatArea.setText("");
 
-        // Tüm mesajları yeniden görüntüle
         for (ChatMessage msg : messageHistory) {
             displayMessage(msg.sender, msg.message, msg.time, msg.isSelf, msg.isSystem);
         }

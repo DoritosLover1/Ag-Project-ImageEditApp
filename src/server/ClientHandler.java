@@ -39,7 +39,6 @@ public class ClientHandler {
         String data = StandardCharsets.UTF_8.decode(readBuffer).toString();
         buffer.append(data);
 
-        // Satır sonuna göre mesajları ayır (Pipe delimited protocol)
         int newlineIndex;
         while ((newlineIndex = buffer.indexOf("\n")) != -1) {
             String message = buffer.substring(0, newlineIndex).trim();
@@ -160,9 +159,11 @@ public class ClientHandler {
                         if (!chatMsg.isEmpty()) {
                             currentRoom.addChatMessage(nickname, chatMsg);
                             broadcastToAll(raw);
-                            System.out.println("[CHAT] " + nickname + ": " + chatMsg);
                         }
                     }
+                    break;
+                case NetworkProtocol.CMD_QUIT:
+                    cleanup();
                     break;
             }
         } catch (Exception ex) {
@@ -203,11 +204,10 @@ public class ClientHandler {
         byte[] bytes = (msg + "\n").getBytes(StandardCharsets.UTF_8);
         writeQueue.add(ByteBuffer.wrap(bytes));
 
-        // Selector'a bu kanalın yazmak istediğini bildir
         SelectionKey key = channel.keyFor(server.getSelector());
         if (key != null && key.isValid()) {
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-            server.getSelector().wakeup(); // Selector'ı hemen uyandır ki OP_WRITE'ı fark etsin
+            server.getSelector().wakeup();
         }
     }
 
@@ -216,18 +216,15 @@ public class ClientHandler {
             ByteBuffer bb = writeQueue.peek();
             int written = channel.write(bb);
             if (written == 0) {
-                // Socket tamponu doldu, sonraki OP_WRITE event'ini bekle
                 return;
             }
             if (!bb.hasRemaining()) {
-                writeQueue.poll(); // Bu parça bitti, kuyruktan çıkar
+                writeQueue.poll();
             } else {
-                // Parçalı yazıldısa da bekle
                 return;
             }
         }
 
-        // Kuyruk tamamen boşaldıysa OP_WRITE ilgisini kapat
         SelectionKey key = channel.keyFor(server.getSelector());
         if (key != null && key.isValid()) {
             key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
@@ -253,9 +250,14 @@ public class ClientHandler {
 
     public void cleanup() {
         try {
+            if (nickname != null) {
+                System.out.println("[SERVER] User disconnected: " + nickname);
+            }
             leaveCurrentRoom();
             server.removeClient(this);
-            channel.close();
+            if (channel.isOpen()) {
+                channel.close();
+            }
         } catch (IOException ignored) {
         }
     }

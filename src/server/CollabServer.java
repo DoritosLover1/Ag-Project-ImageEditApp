@@ -82,8 +82,6 @@ public class CollabServer {
         ClientHandler handler = new ClientHandler(client, roomManager, this);
         client.register(selector, SelectionKey.OP_READ, handler);
         activeClients.add(handler);
-
-        System.out.println("[SERVER] New connection from: " + client.getRemoteAddress());
     }
 
     private void handleRead(SelectionKey key) {

@@ -134,7 +134,18 @@ p[0]|p[1]|username|LEAVE_ROOM|LEAVE
 | :--- | :--- | :--- | :--- |
 | p[4] | — | String | Sabit değer: `LEAVE` |
 
-### 4.5. USER_LIST
+### 4.5. QUIT
+İstemci → Sunucu. Uygulamayı tamamen kapat ve bağlantıyı kes.
+
+```
+p[0]|p[1]|username|QUIT|QUIT
+```
+
+| İndeks | Alan | Tip | Açıklama |
+| :--- | :--- | :--- | :--- |
+| p[4] | — | String | Sabit değer: `QUIT` |
+
+### 4.6. USER_LIST
 Sunucu → Odadaki tüm üyeler. Aktif kullanıcı listesi.
 
 ```
@@ -148,7 +159,7 @@ p[0]|p[1]|SERVER|USER_LIST|user1,user2,user3
 Bu mesaj oda değişikliği (giriş/çıkış) olduğunda otomatik gönderilir.
 İstemci bu listeye göre ayrılan kullanıcıların cursor'larını temizlemelidir.
 
-### 4.6. NEW_USERNAME
+### 4.7. NEW_USERNAME
 İstemci → Sunucu. Kullanıcı adı değiştirme isteği.
 
 ```
@@ -160,7 +171,7 @@ p[0]|p[1]|oldNick|NEW_USERNAME|oldNick|newNick
 | p[4] | oldNick | String | Mevcut kullanıcı adı |
 | p[5] | newNick | String | İstenen yeni kullanıcı adı |
 
-### 4.7. NAME_CHANGED
+### 4.8. NAME_CHANGED
 Sunucu → İstemci. İsim değişikliği onayı.
 
 ```

@@ -59,7 +59,16 @@ public class MainFrame {
 
     private void init() {
         frame = new JFrame("DEHSETÜL VAHŞET PAİNT");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                if (networkManager != null) {
+                    networkManager.sendRaw(NetworkProtocol.buildQuit(username));
+                }
+                System.exit(0);
+            }
+        });
         this.cursorColor = new Color(
                 (int) (Math.random() * 256),
                 (int) (Math.random() * 256),

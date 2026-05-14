@@ -28,6 +28,7 @@ public class NetworkProtocol {
     public static final String CMD_LOGIN_SUCCESS = "LOGIN_SUCCESS";
     public static final String CMD_CHAT = "CHAT";
     public static final String CMD_CHAT_HISTORY = "CHAT_HISTORY";
+    public static final String CMD_QUIT = "QUIT";
 
     private static String buildBase(String sender, String command, String data) {
         String id = UUID.randomUUID().toString().substring(0, 8);
@@ -49,6 +50,10 @@ public class NetworkProtocol {
 
     public static String buildLeaveRoom(String username) {
         return buildBase(username, CMD_LEAVE_ROOM, "LEAVE");
+    }
+
+    public static String buildQuit(String username) {
+        return buildBase(username, CMD_QUIT, "QUIT");
     }
 
     public static String buildRoomInfo(String code) {

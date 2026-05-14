@@ -22,6 +22,7 @@ public class DrawingCanvas extends JPanel {
 
     private final List<CanvasItem> items = new CopyOnWriteArrayList<>();
     private final Map<String, CursorPosition> remoteCursors = new HashMap<>();
+    private final Map<String, BufferedImage> imageCache = new HashMap<>();
     private Tool currentTool = Tool.FREEHAND;
     private Color currentColor = Color.BLACK;
     private int strokeWidth = 2;
@@ -260,6 +261,9 @@ public class DrawingCanvas extends JPanel {
     public void removeItemsByIds(List<String> ids) {
         Set<String> idSet = new HashSet<>(ids);
         items.removeIf(i -> idSet.contains(i.getIdOfImage()));
+        for (String id : ids) {
+            imageCache.remove(id);
+        }
         SwingUtilities.invokeLater(() -> {
             repaint();
             fireItemsChanged();
@@ -469,7 +473,7 @@ public class DrawingCanvas extends JPanel {
             else
                 drawImage(g2, item.getImage());
         }
-        if (drawing && currentTool != Tool.FREEHAND && currentTool != Tool.SELECT) {
+        if (drawing && currentTool != Tool.SELECT) {
             g2.setColor(currentColor);
             g2.setStroke(new BasicStroke(strokeWidth));
             drawPreview(g2);
@@ -541,13 +545,20 @@ public class DrawingCanvas extends JPanel {
     private void drawImage(Graphics2D g2, PastedImage pi) {
         if (pi == null || pi.getImageData() == null)
             return;
-        try {
-            BufferedImage img = ImageIO.read(new ByteArrayInputStream(pi.getImageData()));
-            if (img != null)
-                g2.drawImage(img, pi.getXOfImage(), pi.getYOfImage(), pi.getWidthOfImage(), pi.getHeightOfImage(),
-                        null);
-        } catch (IOException e) {
-            System.err.println("Image draw error: " + e.getMessage());
+        BufferedImage img = imageCache.get(pi.getIdOfImage());
+        if (img == null) {
+            try {
+                img = ImageIO.read(new ByteArrayInputStream(pi.getImageData()));
+                if (img != null) {
+                    imageCache.put(pi.getIdOfImage(), img);
+                }
+            } catch (IOException e) {
+                System.err.println("Image decode error: " + e.getMessage());
+                return;
+            }
+        }
+        if (img != null) {
+            g2.drawImage(img, pi.getXOfImage(), pi.getYOfImage(), pi.getWidthOfImage(), pi.getHeightOfImage(), null);
         }
     }
 
@@ -599,8 +610,9 @@ public class DrawingCanvas extends JPanel {
         g2.drawString(cp.getUsername(), cp.getX() + 16, cp.getY() + 14);
     }
 
-    public void addRemoteShape(DrawShape shape, String sender) {
-        if (shape == null || hasItemWithId(shape.getIdOfShape())) return;
+    public void addShapeSilently(DrawShape shape, String sender) {
+        if (shape == null || hasItemWithId(shape.getIdOfShape()))
+            return;
         items.add(new CanvasItem(shape, sender));
         SwingUtilities.invokeLater(() -> {
             repaint();
@@ -609,15 +621,18 @@ public class DrawingCanvas extends JPanel {
     }
 
     private boolean hasItemWithId(String id) {
-        if (id == null) return false;
+        if (id == null)
+            return false;
         for (CanvasItem item : items) {
-            if (id.equals(item.getIdOfImage())) return true;
+            if (id.equals(item.getIdOfImage()))
+                return true;
         }
         return false;
     }
 
     public void addRemoteImage(PastedImage image, String sender) {
-        if (image == null || hasItemWithId(image.getIdOfImage())) return;
+        if (image == null || hasItemWithId(image.getIdOfImage()))
+            return;
         items.add(new CanvasItem(image, sender));
         SwingUtilities.invokeLater(() -> {
             repaint();
@@ -627,6 +642,7 @@ public class DrawingCanvas extends JPanel {
 
     public void removeItemById(String id) {
         items.removeIf(i -> id.equals(i.getIdOfImage()));
+        imageCache.remove(id);
         SwingUtilities.invokeLater(() -> {
             repaint();
             fireItemsChanged();
@@ -669,6 +685,7 @@ public class DrawingCanvas extends JPanel {
         synchronized (remoteCursors) {
             remoteCursors.clear();
         }
+        imageCache.clear();
         selectionRect = null;
         SwingUtilities.invokeLater(() -> {
             repaint();
@@ -778,11 +795,5 @@ public class DrawingCanvas extends JPanel {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ImageIO.write(img, "PNG", bos);
         return bos.toByteArray();
-    }
-
-    public void addShapeSilently(DrawShape shape, String sender) {
-        if (shape == null || hasItemWithId(shape.getIdOfShape())) return;
-        items.add(new CanvasItem(shape, sender));
-        SwingUtilities.invokeLater(this::repaint);
     }
 }

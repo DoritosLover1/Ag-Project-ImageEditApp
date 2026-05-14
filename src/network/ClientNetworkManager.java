@@ -207,4 +207,8 @@ public class ClientNetworkManager {
     public void setUsername(String username) {
         this.username = username;
     }
+
+    public void setCanvas(DrawingCanvas canvas) {
+        this.canvas = canvas;
+    }
 }

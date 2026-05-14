@@ -475,6 +475,23 @@ Yüksek frekanslı fare hareketlerini ağda kısıtlamak istemcinin sorumluluğu
 
 Sunucu mesajı odadaki tüm üyelere iletir ve oda geçmişine kaydeder.
 
+---
+
+#### CHAT_HISTORY — Mesaj Geçmişi
+**Yön:** Sunucu → İstemci (Odaya yeni girildiğinde)
+
+Odaya yeni katılan kullanıcıya, odanın geçmiş sohbet kayıtlarını iletmek için kullanılır.
+
+| Konum | Alan      | Tip   | Açıklama                                      |
+| :---- | :-------- | :---- | :-------------------------------------------- |
+| 4     | sender    | Metin | Mesajı asıl gönderen kullanıcı adı            |
+| 5     | base64msg | Metin | Base64 ile kodlanmış mesaj içeriği            |
+| 6     | timestamp | Sayı  | Mesajın asıl gönderildiği Unix zaman damgası  |
+
+Mesaj içeriği, `|` gibi ayırıcı karakterlerden etkilenmemesi için UTF-8 olarak Base64 ile kodlanmıştır.
+
+---
+
 **İstemci, bu mesajı aldığında:**
 - Mesajı sohbet alanında göndericinin adı ve zaman damgasıyla birlikte gösterir
 

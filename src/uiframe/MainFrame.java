@@ -319,7 +319,9 @@ public class MainFrame {
         sidebar.setBackground(theme.sidebarBg);
         sidebar.setPreferredSize(new Dimension(230, 0));
         sidebar.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, theme.inputBorder));
-        memberModel = new DefaultListModel<>();
+        if (memberModel == null) {
+            memberModel = new DefaultListModel<>();
+        }
         JList<String> memberList = new JList<>(memberModel);
         memberList.setBackground(theme.sidebarBg);
         memberList.setForeground(theme.titleText);
@@ -333,7 +335,9 @@ public class MainFrame {
         membersBox.setOpaque(false);
         membersBox.add(sectionTitle("Uyeler"), BorderLayout.NORTH);
         membersBox.add(memberScroll, BorderLayout.CENTER);
-        itemListModel = new DefaultListModel<>();
+        if (itemListModel == null) {
+            itemListModel = new DefaultListModel<>();
+        }
         JList<String> itemList = new JList<>(itemListModel);
         itemList.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
@@ -718,6 +722,9 @@ public class MainFrame {
 
         if (snap != null) {
             canvas.loadCanvasState(snap);
+            if (networkManager != null) {
+                networkManager.setCanvas(canvas);
+            }
             setupNetworkHooks();
         }
 

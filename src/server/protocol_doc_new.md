@@ -1,6 +1,6 @@
 ```
 PaiCollab Messaging Protocol                                  PCMP/2.1
-Kategori: Uygulama Katmanı Protokolü                       Mayıs 2025
+Kategori: Uygulama Katmanı Protokolü                       Mayıs 2026
 ```
 
 ---
@@ -9,10 +9,10 @@ Kategori: Uygulama Katmanı Protokolü                       Mayıs 2025
 
 ## Özet
 
-Bu belge, PaiCollab işbirlikçi çizim ve mesajlaşma uygulamasında sunucu ile
+Bu belge, PaiCollab çizim ve mesajlaşma uygulamasında sunucu ile
 istemciler arasındaki iletişimi tanımlar. Herhangi bir programlama dili veya
-platformda bu belgeye uygun bir istemci veya sunucu uygulaması geliştirilebilir.
-Bu belge dilden ve platformdan bağımsızdır.
+platformda bu belgeye uygun bir istemci oluşturabilir ve sunucu ile haberleşebilirsiniz.
+Bahsi geçen belgede programlama dilinden ve platformdan bağımsızdır.
 
 ---
 
@@ -34,8 +34,7 @@ Bu belge dilden ve platformdan bağımsızdır.
 
 ## 1. Taşıma Katmanı
 
-PCMP, güvenilir, sıralı ve akış tabanlı iletişim sağlamak amacıyla TCP üzerinde
-çalışır.
+PCMP, güvenilir, sıralı ve akış tabanlı iletişim sağlamak amacıyla TCP haberlerşme protokolü üzerine inşa edilmiştir.
 
 | Özellik        | Değer                      |
 | :------------- | :------------------------- |
@@ -46,15 +45,15 @@ PCMP, güvenilir, sıralı ve akış tabanlı iletişim sağlamak amacıyla TCP 
 | Alan Ayırıcı   | Dikey Çizgi / Pipe (0x7C)  |
 
 Her mesaj tek bir satırdan oluşur ve satır sonu karakteri (LF) ile sonlandırılır.
-Alıcı taraf, gelen veri akışını LF karakterine göre bölerek mesajları birbirinden
-ayırır.
+Alıcı taraf yani sunucu, gelen veri akışını LF karakterine göre bölerek mesajları birbirinden
+ayırır. Gerekli kısımlardaki değerleri okuyarak/işleyerek bu mesajı işlemlerini gerekli yerlere iletilmesini ve işlenmesini sağlar. 
 
 ---
 
 ## 2. Mesaj Yapısı (Envelope)
 
 Her mesaj, dört adet sabit başlık alanı ve ardından komuta özgü veri alanlarından
-oluşur. Tüm alanlar pipe karakteri ile ayrılır.
+meydana gelmektedir. Tüm alanlar ise pipe karakteri ile ayrılmışlardır.
 
 ```
 MESAJ_KÜMESI:
@@ -70,14 +69,13 @@ MESAJ_KÜMESI:
 | COMMAND     | 3     | Metin  | Büyük harflerle yazılmış komut adı              |
 | DATA_N      | 4+    | Değişken | Komuta özgü parametreler                      |
 
-Sunucudan gelen tüm mesajlarda SENDER alanı `SERVER` değerini taşır. İstemciden
-gelen mesajlarda bu alan istemcinin kullanıcı adıdır.
+Sunucudan gelen tüm mesajlarda SENDER alanı `SERVER` değerini taşır. İstemci tarafında ise gönderilen mesajlarda bu alan istemcinin kullanıcı adıdır.
 
 ---
 
 ## 3. Durum Makinası (FSM)
 
-Bir istemci bağlantısı boyunca aşağıdaki beş durumdan birinde bulunur:
+Bir istemcinin hayat döngüsü boyunca aşağıdaki beş durumdan birinde bulunabilir ve mesajlarını gönderirken veya alırken şu an bulunduğu duruma göre hareket eder:
 
 ```
          ┌──────────────┐
@@ -103,13 +101,13 @@ Bir istemci bağlantısı boyunca aşağıdaki beş durumdan birinde bulunur:
                                               CHAT / DRAW / CURSOR işlemleri
 ```
 
-| Durum          | Açıklama                                                         |
-| :------------- | :--------------------------------------------------------------- |
-| DISCONNECTED   | TCP bağlantısı henüz kurulmamış veya kesilmiş                    |
-| CONNECTED      | TCP bağlantısı kurulmuş, kimlik doğrulaması yapılmamış           |
-| AUTHENTICATING | LOGIN mesajı gönderilmiş, sunucu yanıtı bekleniyor               |
-| LOBBY          | Kimlik doğrulaması tamamlanmış, herhangi bir odada değil         |
-| ROOM           | Bir odaya katılmış, çizim ve mesajlaşma işlemleri aktif          |
+| Durum          | Açıklama                                                                              |
+| :------------- | :------------------------------------------------------------------------------------ |
+| DISCONNECTED   | TCP bağlantısı henüz kurulmamış veya kesilmiş durumunu ifade eder.                    |
+| CONNECTED      | TCP bağlantısı kurulmuş, kimlik doğrulaması yapılmamış durumunu ifade eder.           |
+| AUTHENTICATING | LOGIN mesajı gönderilmiş, sunucu yanıtı bekleniyor durumunu ifade eder.               |
+| LOBBY          | Kimlik doğrulaması tamamlanmış, herhangi bir odada değil durumunu ifade eder.         |
+| ROOM           | Bir odaya katılmış, çizim ve mesajlaşma işlemleri aktif durumunu ifade eder.          |
 
 ---
 
@@ -122,8 +120,7 @@ Bir istemci bağlantısı boyunca aşağıdaki beş durumdan birinde bulunur:
 #### LOGIN
 **Yön:** İstemci → Sunucu
 
-Sunucuya kullanıcı adı ile giriş isteği gönderir. İstemci CONNECTED durumunda
-bu mesajı gönderir.
+Sunucuya kullanıcı adı ile giriş yapmak için gönderilir.Eğer kullanıcı adı müsait ise sunucu LOGIN_SUCCESS mesajını gönderir. Aksi takdirde ERROR mesajını gönderir. İstemci CONNECTED durumunda iken bu mesajı gönderir.
 
 | Konum | Alan     | Tip   | Açıklama              |
 | :---- | :------- | :---- | :-------------------- |
@@ -136,10 +133,10 @@ bu mesajı gönderir.
 #### LOGIN_SUCCESS
 **Yön:** Sunucu → İstemci
 
-Giriş isteğinin başarıyla kabul edildiğini bildirir.
+Giriş isteğinin başarıyla kabul edildiğinin mesajıdır. Eğer giriş isteği başarısız olursa ERROR mesajı gönderilir. 
 
-| Konum | Alan     | Tip   | Açıklama              |
-| :---- | :------- | :---- | :-------------------- |
+| Konum | Alan     | Tip   | Açıklama                |
+| :---- | :------- | :---- | :---------------------- |
 | 4     | nickname | Metin | Onaylanan kullanıcı adı |
 
 **İstemci, bu mesajı aldığında:**
@@ -151,10 +148,10 @@ Giriş isteğinin başarıyla kabul edildiğini bildirir.
 #### ERROR
 **Yön:** Sunucu → İstemci
 
-Bir işlemin başarısız olduğunu bildirir.
+Bir işlemin veya komutun sunucu tarafından kabul edilmediğinde istemciye gönderilen mesajdır.Mesajın içeriği işlem veya komutla ilgili hata bilgisidir. 
 
-| Konum | Alan          | Tip   | Açıklama    |
-| :---- | :------------ | :---- | :---------- |
+| Konum | Alan          | Tip   | Açıklama        |
+| :---- | :------------ | :---- | :-------------- |
 | 4     | error_message | Metin | Hata açıklaması |
 
 **İstemci, bu mesajı aldığında:**
@@ -170,22 +167,20 @@ Bir işlemin başarısız olduğunu bildirir.
 #### CREATE_ROOM
 **Yön:** İstemci → Sunucu
 
-Yeni bir oda oluşturma isteği gönderir. İstemci LOBBY durumunda bu mesajı
-gönderebilir.
+İstemci LOBBY durumunda iken yeni bir oda oluşturma isteği gönderir. Oda başarıyla oluşturulursa ROOM_INFO mesajı ardından snapshot dizisi gönderilir. Aksi takdirde ERROR mesajı gönderilir. 
 
 | Konum | Alan | Tip   | Açıklama              |
 | :---- | :--- | :---- | :-------------------- |
 | 4     | —    | Metin | Sabit değer: `NEW`    |
 
-**Sunucu Yanıtı:** ROOM_INFO ardından snapshot dizisi
+**Sunucu Yanıtı:** ROOM_INFO ardından snapshot dizisi veya ERROR
 
 ---
 
 #### JOIN_ROOM
 **Yön:** İstemci → Sunucu
 
-Var olan bir odaya katılma isteği gönderir. İstemci LOBBY durumunda bu mesajı
-gönderebilir.
+İstemci LOBBY durumunda iken var olan bir odaya katılma isteği gönderir. Bunu yaparken 6 karakterlik oda kodu gönderir. Oda başarıyla oluşturulursa ROOM_INFO mesajı ardından snapshot dizisi gönderilir. Aksi takdirde ERROR mesajı gönderilir.
 
 | Konum | Alan     | Tip   | Açıklama                          |
 | :---- | :------- | :---- | :-------------------------------- |
@@ -198,11 +193,10 @@ gönderebilir.
 #### ROOM_INFO
 **Yön:** Sunucu → İstemci
 
-Odaya giriş işleminin onaylandığını bildirir. Snapshot dizisinin başlangıcını
-işaret eder.
+Odaya giriş işleminin onaylandığını bildirir. Snapshot dizisinin başlangıcını işaret eder. Eğer kullanıcı başarılı bir şekilde odaya katılamazsa ERROR mesajı gönderilir. Ancak başarılı ise kullanıcı "odadaki son halini" alması için snapshot dizisini almaya başlar. Snapshot dizisi bittikten sonra odadaki kullanıcı listesi gönderilir. Odadaki kullanıcı listesi bittikten sonra CHAT_HISTORY mesajları gönderilir. Kullanıcı mesajlaşma ve çizim yapmaya hazırdır.
 
-| Konum | Alan     | Tip   | Açıklama         |
-| :---- | :------- | :---- | :--------------- |
+| Konum | Alan     | Tip   | Açıklama            |
+| :---- | :------- | :---- | :------------------ |
 | 4     | roomCode | Metin | Girilen odanın kodu |
 
 **İstemci, bu mesajı aldığında:**
@@ -211,7 +205,9 @@ işaret eder.
 - Tüm uzak imleçleri ekrandan kaldırır
 - ROOM durumuna geçer
 - Ardından gelen snapshot mesajlarını almaya hazırlanır
-
+- Snapshot dizisi bittikten sonra odadaki kullanıcı listesi gönderilir.
+- Odadaki kullanıcı listesi bittikten sonra CHAT_HISTORY mesajları gönderilir. 
+- Kullanıcı mesajlaşma ve çizim yapmaya hazırdır.
 ---
 
 #### LEAVE_ROOM
@@ -225,21 +221,21 @@ gönderebilir.
 | 4     | —    | Metin | Sabit değer: `LEAVE`  |
 
 **Sunucu:** İstemciyi odadan çıkarır, kalan üyelere güncel USER_LIST gönderir.
-**İstemci:** LOBBY durumuna döner.
+**İstemci:** LOBBY durumuna döner. Var olan tüm çizimleri, imelçeleri ve mesajları temizler.
 
 ---
 
 #### QUIT
 **Yön:** İstemci → Sunucu
 
-Uygulamayı kapatmadan önce bağlantının düzgün sonlandırılmasını sağlar.
+Uygulamayı kapatmadan önce bağlantının düzgün sonlandırılmasını sağlar. Bu mesajı alan istemci tüm yapılanları temizler ve bağlantıyı kapatır.
 
 | Konum | Alan | Tip   | Açıklama              |
 | :---- | :--- | :---- | :-------------------- |
 | 4     | —    | Metin | Sabit değer: `QUIT`   |
 
 **Sunucu:** İstemciyi odadan ve sistemden çıkarır, TCP bağlantısını kapatır.
-
+**İstemci:** Tüm çizimleri, imelçeleri ve mesajları temizler. Bağlantıyı kapatır.
 ---
 
 #### USER_LIST
@@ -248,9 +244,9 @@ Uygulamayı kapatmadan önce bağlantının düzgün sonlandırılmasını sağl
 Odanın güncel üye listesini bildirir. Bir kullanıcı odaya her katıldığında veya
 ayrıldığında otomatik olarak gönderilir.
 
-| Konum | Alan  | Tip   | Açıklama                              |
-| :---- | :---- | :---- | :------------------------------------ |
-| 4     | users | Metin | Virgülle ayrılmış kullanıcı adları listesi |
+| Konum | Alan  | Tip   | Açıklama                                    |
+| :---- | :---- | :---- | :------------------------------------------ |
+| 4     | users | Metin | Virgülle ayrılmış kullanıcı adları listesi  |
 
 **İstemci, bu mesajı aldığında:**
 - Üye listesini günceller
@@ -261,24 +257,24 @@ ayrıldığında otomatik olarak gönderilir.
 #### NEW_USERNAME
 **Yön:** İstemci → Sunucu
 
-Kullanıcı adını değiştirme isteği gönderir.
+Kullanıcı adını değiştirme isteği gönderir. Eğer kullanıcı adı müsait ise sunucu NAME_CHANGED mesajını gönderir. Aksi takdirde ERROR mesajını gönderir. Bu mesajı sadece LOBBY durumunda gönderebilir.
 
-| Konum | Alan    | Tip   | Açıklama              |
-| :---- | :------ | :---- | :-------------------- |
-| 4     | oldNick | Metin | Mevcut kullanıcı adı  |
-| 5     | newNick | Metin | İstenen yeni kullanıcı adı |
+| Konum | Alan    | Tip   | Açıklama                        |
+| :---- | :------ | :---- | :------------------------------ |
+| 4     | oldNick | Metin | Mevcut kullanıcı adı            |
+| 5     | newNick | Metin | İstenen yeni kullanıcı adı      |
 
-**Sunucu Yanıtı:** NAME_CHANGED veya ERROR
+**Sunucu Yanıtı:** NAME_CHANGED veya ERROR mesajı yollar
 
 ---
 
 #### NAME_CHANGED
 **Yön:** Sunucu → İstemci
 
-Kullanıcı adı değiştirme isteğinin kabul edildiğini bildirir.
+Sunucu tarafından kullanıcı adı değiştirme isteğinin kabul edildiğini bildirir.
 
-| Konum | Alan    | Tip   | Açıklama                    |
-| :---- | :------ | :---- | :-------------------------- |
+| Konum | Alan    | Tip   | Açıklama                     |
+| :---- | :------ | :---- | :--------------------------- |
 | 4     | newNick | Metin | Onaylanan yeni kullanıcı adı |
 
 **İstemci, bu mesajı aldığında:**
@@ -302,16 +298,16 @@ dizisidir.
 #### SQUARE — Dikdörtgen
 **Yön:** İstemci → Sunucu → Diğer İstemciler
 
-| Konum | Alan   | Tip     | Açıklama                    |
-| :---- | :----- | :------ | :-------------------------- |
-| 4     | x      | Tam sayı | Sol üst köşe X koordinatı  |
-| 5     | y      | Tam sayı | Sol üst köşe Y koordinatı  |
-| 6     | w      | Tam sayı | Genişlik (piksel)           |
-| 7     | h      | Tam sayı | Yükseklik (piksel)          |
-| 8     | color  | Metin   | Dolgu veya kenar rengi      |
-| 9     | stroke | Tam sayı | Kenar kalınlığı (piksel)    |
-| 10    | filled | Mantıksal| Dolu mu? (`true` / `false`) |
-| 11    | id     | Metin   | Nesnenin benzersiz kimliği  |
+| Konum | Alan   | Tip      | Açıklama                     |
+| :---- | :----- | :------  | :--------------------------- |
+| 4     | x      | Tam sayı | Sol üst köşe X koordinatı    |
+| 5     | y      | Tam sayı | Sol üst köşe Y koordinatı    |
+| 6     | w      | Tam sayı | Genişlik (piksel)            |
+| 7     | h      | Tam sayı | Yükseklik (piksel)           | 
+| 8     | color  | Metin    | Dolgu veya kenar rengi       |
+| 9     | stroke | Tam sayı | Kenar kalınlığı (piksel)     |
+| 10    | filled | Mantıksal| Dolu mu? (`true` / `false`)  |
+| 11    | id     | Metin    | Nesnenin benzersiz kimliği   |
 
 **İstemci, bu mesajı aldığında:**
 - Kimliği daha önce eklenmemiş ise dikdörtgeni çizim alanına ekler
@@ -559,10 +555,10 @@ nesneyi iki kez eklememelidir.
 
 | Veri Tipi   | Açıklama                                                             |
 | :---------- | :------------------------------------------------------------------- |
-| Metin       | UTF-8 kodlu karakter dizisi; pipe ve satır sonu karakteri içeremez  |
-| Tam sayı    | İşaretli 32-bit tamsayı aralığında ondalıksız sayı                  |
-| Sayı (long) | İşaretli 64-bit tamsayı; Unix epoch milisaniye zaman damgaları için |
-| Mantıksal   | Yalnızca `true` veya `false` değerini alır                          |
+| Metin       | UTF-8 kodlu karakter dizisi; pipe ve satır sonu karakteri içeremez   |
+| Tam sayı    | İşaretli 32-bit tamsayı aralığında ondalıksız sayı                   |
+| Sayı (long) | İşaretli 64-bit tamsayı; Unix epoch milisaniye zaman damgaları için  |
+| Mantıksal   | Yalnızca `true` veya `false` değerini alır                           |
 | Base64      | RFC 4648 standardı; standart alfabe, dolgu karakteri dahil           |
 
 | Sabit            | Biçim                                | Örnek         |

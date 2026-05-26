@@ -614,6 +614,62 @@ When a pipe character (`|`) must be used in message content, the relevant field 
 
 ---
 
+## gRPC + RabbitMQ Version (New)
+
+This repository now includes an alternative transport layer based on **gRPC** (HTTP/2 + Protobuf) and **RabbitMQ**
+for room fan-out broadcasting (publish/subscribe). This is aligned with the recommended patterns from
+[gRPC](https://grpc.io/) and [RabbitMQ Tutorials](https://www.rabbitmq.com/tutorials).
+
+### Prerequisites
+- **JDK 21+**
+- **Apache Maven 3.9+**
+- **RabbitMQ** running locally (default `localhost:5672`, user/pass `guest/guest`)
+
+### 1) Start RabbitMQ
+Use any RabbitMQ installation. If you prefer Docker:
+
+```bash
+docker run --rm -it -p 5672:5672 -p 15672:15672 rabbitmq:4-management
+```
+
+Management UI: `http://localhost:15672` (guest/guest)
+
+### 2) Build (generates gRPC stubs from `.proto`)
+
+```bash
+mvn -DskipTests package
+```
+
+### 3) Run gRPC Server
+Default port is **50051** (override with `.env` `GRPC_PORT`).
+
+```bash
+mvn -DskipTests exec:java -Dexec.mainClass=grpcserver.GrpcServerMain
+```
+
+Or run the compiled classes:
+
+```bash
+java -cp target/classes;target/dependency/* grpcserver.GrpcServerMain
+```
+
+### 4) Run Swing Client (gRPC)
+In the login screen, enter server as `localhost:50051` (or your `GRPC_PORT`).
+
+```bash
+mvn -DskipTests exec:java -Dexec.mainClass=uiframe.MainFrame
+```
+
+### Environment variables (`.env`)
+Supported keys (optional):
+- `GRPC_PORT` (default 50051)
+- `RABBIT_HOST` (default localhost)
+- `RABBIT_PORT` (default 5672)
+- `RABBIT_USER` / `RABBIT_PASS` (default guest/guest)
+- `RABBIT_VHOST` (default `/`)
+
+---
+
 <a name="türkçe"></a>
 ## 🇹🇷 Türkçe Dokümantasyon
 

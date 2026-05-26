@@ -22,7 +22,7 @@ public class MainFrame {
     private JLabel lobbyUsernameLabel;
     private JLabel roomCodeLabel;
     private DrawingCanvas canvas;
-    private ClientNetworkManager networkManager;
+    private GrpcClientNetworkManager networkManager;
     private DefaultListModel<String> memberModel;
     private DefaultListModel<String> itemListModel;
     private ChatPanel chatPanel;
@@ -64,7 +64,11 @@ public class MainFrame {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
                 if (networkManager != null) {
-                    networkManager.sendRaw(NetworkProtocol.buildQuit(username));
+                    try {
+                        networkManager.leaveRoom();
+                    } catch (Exception ignored) {
+                    }
+                    networkManager.shutdown();
                 }
                 System.exit(0);
             }
@@ -190,7 +194,8 @@ public class MainFrame {
                 }
             }
             try {
-                this.networkManager = new ClientNetworkManager(ip, port, username, canvas, chatPanel);
+                // gRPC endpoint (recommended default: localhost:50051)
+                this.networkManager = new GrpcClientNetworkManager(ip, port, canvas, chatPanel);
                 networkManager.setOnRoomJoined(code -> {
                     this.myRoomCode = code;
                     goCanvas();
@@ -215,7 +220,6 @@ public class MainFrame {
                 });
                 networkManager.setOnLoginSuccess(nick -> {
                     this.username = nick;
-                    networkManager.setUsername(nick);
                     if (chatPanel != null)
                         chatPanel.setUsername(nick);
                     goLobby();
@@ -230,7 +234,7 @@ public class MainFrame {
                     JOptionPane.showMessageDialog(frame, "Adınız başarıyla değiştirildi: " + newNick);
                 });
                 setupNetworkHooks();
-                networkManager.connect();
+                networkManager.connectAndLogin(username);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Bağlantı hatası: " + ex.getMessage());
                 return;
@@ -349,7 +353,7 @@ public class MainFrame {
                         if (index < snap.size()) {
                             String id = snap.get(index).getIdOfImage();
                             if (networkManager != null) {
-                                networkManager.sendRaw(network.NetworkProtocol.buildDelete(username, id));
+                                networkManager.sendDelete(id);
                             }
                             canvas.removeItemById(id);
                         }
@@ -392,7 +396,7 @@ public class MainFrame {
         if (chatPanel == null) {
             chatPanel = new ChatPanel(username, theme, message -> {
                 if (networkManager != null) {
-                    networkManager.sendRaw(NetworkProtocol.buildChat(username, message));
+                    networkManager.sendChat(message);
                 }
             });
         }
@@ -519,7 +523,7 @@ public class MainFrame {
         JButton clearBtn = CustomButton.smallButtonGenerate("Temizle", theme);
         clearBtn.addActionListener(e -> {
             if (networkManager != null) {
-                networkManager.sendRaw(NetworkProtocol.buildClear(username));
+                networkManager.sendClear();
             }
             canvas.clearCanvas();
         });
@@ -698,7 +702,7 @@ public class MainFrame {
         String newName = JOptionPane.showInputDialog(frame, "Yeni kullanıcı adınızı girin:", username);
         if (newName != null && !newName.trim().isEmpty() && !newName.equals(username)) {
             if (networkManager != null) {
-                networkManager.sendRaw(NetworkProtocol.buildChangeName(username, newName.trim()));
+                networkManager.changeName(newName.trim());
             }
         }
     }
@@ -722,9 +726,6 @@ public class MainFrame {
 
         if (snap != null) {
             canvas.loadCanvasState(snap);
-            if (networkManager != null) {
-                networkManager.setCanvas(canvas);
-            }
             setupNetworkHooks();
         }
 
@@ -765,14 +766,11 @@ public class MainFrame {
         canvas.setOnShapeDrawn(shape -> networkManager.sendShape(shape));
         canvas.setOnCursorMoved(cp -> networkManager.sendCursor(cp));
         canvas.setOnImagePasted(pi -> {
-            String msg = NetworkProtocol.buildImage(username,
-                    pi.getXOfImage(), pi.getYOfImage(), pi.getWidthOfImage(), pi.getHeightOfImage(),
-                    pi.getImageData(), pi.getIdOfImage());
-            networkManager.sendRaw(msg);
+            networkManager.sendImage(pi);
         });
         canvas.setOnItemsCut(ids -> {
             for (String id : ids) {
-                networkManager.sendRaw(NetworkProtocol.buildDelete(username, id));
+                networkManager.sendDelete(id);
             }
         });
 

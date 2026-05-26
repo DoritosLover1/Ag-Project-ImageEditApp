@@ -11,6 +11,7 @@ public class Room {
     private final String code;
     private final String ownerNickname;
     private final List<ClientHandler> members = new CopyOnWriteArrayList<>();
+    private final List<String> grpcMembers = new CopyOnWriteArrayList<>();
     private final List<CanvasItem> canvasItems = Collections.synchronizedList(new ArrayList<>());
     private final List<ChatMessage> chatMessages = Collections.synchronizedList(new ArrayList<>());
     private static final String SAVE_DIR = "saved_canvases/";
@@ -54,8 +55,20 @@ public class Room {
         return members;
     }
 
+    public void addGrpcMember(String nickname) {
+        if (nickname != null && !nickname.isBlank() && !grpcMembers.contains(nickname)) {
+            grpcMembers.add(nickname);
+        }
+    }
+
+    public void removeGrpcMember(String nickname) {
+        if (nickname != null) {
+            grpcMembers.remove(nickname);
+        }
+    }
+
     public boolean isEmpty() {
-        return members.isEmpty();
+        return members.isEmpty() && grpcMembers.isEmpty();
     }
 
     public void addCanvasItem(CanvasItem item) {
@@ -100,6 +113,11 @@ public class Room {
         for (ClientHandler h : members) {
             if (h.getNickname() != null)
                 nicks.add(h.getNickname());
+        }
+        for (String nick : grpcMembers) {
+            if (!nicks.contains(nick)) {
+                nicks.add(nick);
+            }
         }
         return nicks;
     }

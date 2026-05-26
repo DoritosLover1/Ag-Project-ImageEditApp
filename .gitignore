@@ -1,6 +1,8 @@
 # Derlenmiş dosyalar
 bin/
+target/
 *.class
+.settings
 
 .env
 

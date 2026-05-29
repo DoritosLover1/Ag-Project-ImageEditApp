@@ -18,13 +18,6 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/**
- * Drop-in replacement for ClientNetworkManager (TCP) but using gRPC +
- * RabbitMQ-backed streaming.
- *
- * UI thread rules:
- * - All callbacks are dispatched onto Swing EDT via SwingUtilities.invokeLater.
- */
 public final class GrpcClientNetworkManager {
     private final String host;
     private final int port;
@@ -40,7 +33,6 @@ public final class GrpcClientNetworkManager {
     private volatile uiframe.ChatPanel chatPanel;
     private volatile VoiceChatManager voiceManager;
 
-    // Callbacks (similar to TCP manager)
     private Consumer<String> onRoomJoined;
     private Consumer<List<String>> onUserListUpdated;
     private Consumer<String> onError;
@@ -240,13 +232,15 @@ public final class GrpcClientNetworkManager {
     }
 
     public void sendAudio(byte[] audioData) {
-        if (audioData == null || roomCode == null) return;
+        if (audioData == null || roomCode == null)
+            return;
         Event ev = Event.newBuilder()
                 .setRoomCode(roomCode)
                 .setTimestampMs(System.currentTimeMillis())
                 .setSender(nickname)
                 .setType(EventType.EVENT_TYPE_AUDIO)
-                .setAudio(AudioEvent.newBuilder().setAudioData(com.google.protobuf.ByteString.copyFrom(audioData)).build())
+                .setAudio(AudioEvent.newBuilder().setAudioData(com.google.protobuf.ByteString.copyFrom(audioData))
+                        .build())
                 .build();
         sendEventAsync(ev);
     }
@@ -261,7 +255,6 @@ public final class GrpcClientNetworkManager {
         }
     }
 
-    // callbacks
     public void setOnRoomJoined(Consumer<String> callback) {
         this.onRoomJoined = callback;
     }
@@ -296,12 +289,10 @@ public final class GrpcClientNetworkManager {
                 }
                 this.roomCode = resp.getRoomCode();
 
-                // Fire join callback first so UI can clear state
                 if (onRoomJoined != null) {
                     SwingUtilities.invokeLater(() -> onRoomJoined.accept(roomCode));
                 }
-                // Mimic old TCP order:
-                // 1) ROOM_INFO: clear canvas/chat/cursors
+
                 if (canvas != null) {
                     canvas.clearCanvas();
                 }
@@ -309,15 +300,11 @@ public final class GrpcClientNetworkManager {
                     chatPanel.clearMessages();
                 }
 
-                // 2) USER_LIST
                 if (onUserListUpdated != null) {
                     SwingUtilities.invokeLater(() -> onUserListUpdated.accept(resp.getUsersList()));
                 }
-
-                // 3) Snapshot events (SHAPE/IMAGE/CHAT_HISTORY)
                 applySnapshotEvents(resp.getSnapshotEventsList());
 
-                // Start streaming subscription after snapshot is applied.
                 startSubscribe();
             } catch (Exception e) {
                 fireError(e.getMessage());
@@ -364,7 +351,6 @@ public final class GrpcClientNetworkManager {
                     break;
                 }
                 default:
-                    // other types are live-only in your TCP design
                     break;
             }
         }
@@ -433,7 +419,6 @@ public final class GrpcClientNetworkManager {
                             case EVENT_TYPE_CURSOR: {
                                 if (canvas == null || !ev.hasCursor())
                                     break;
-                                // TCP version didn't broadcast cursor back to the sender.
                                 if (sender != null && sender.equals(nickname))
                                     break;
                                 CursorEvent ce = ev.getCursor();
@@ -448,7 +433,6 @@ public final class GrpcClientNetworkManager {
                                 break;
                             }
                             case EVENT_TYPE_CHAT_HISTORY: {
-                                // live-only streams shouldn't send this; ignore
                                 break;
                             }
                             case EVENT_TYPE_AUDIO: {
@@ -476,8 +460,6 @@ public final class GrpcClientNetworkManager {
     }
 
     private void cancelSubscribe() {
-        // client-side cancel for server-streaming is done by shutting down the channel;
-        // keep it simple for now.
     }
 
     private void sendEventAsync(Event ev) {

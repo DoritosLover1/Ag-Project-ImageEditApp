@@ -18,7 +18,6 @@ public final class GrpcRoomSnapshot {
         if (room == null)
             return out;
 
-        // Canvas items
         for (CanvasItem item : room.getCanvasSnapshot()) {
             if (item.getItemType() == CanvasItem.ItemType.SHAPE) {
                 Event ev = Event.newBuilder()
@@ -49,7 +48,6 @@ public final class GrpcRoomSnapshot {
             }
         }
 
-        // Chat history
         for (Room.ChatMessage cm : room.getChatMessages()) {
             Event ev = Event.newBuilder()
                     .setRoomCode(room.getCode())

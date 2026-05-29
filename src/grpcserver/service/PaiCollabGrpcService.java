@@ -14,20 +14,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
-/**
- * gRPC service that reuses existing Room/RoomManager storage, and uses RabbitMQ
- * fanout to broadcast room events.
- *
- * Notes:
- * - Nickname uniqueness is enforced server-wide (like your NIO server).
- * - Snapshot is returned in RoomEnterResponse as a list of Events.
- * - Live broadcast uses RabbitMQ exchange per room.
- */
 public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabServiceImplBase {
     private final RoomManager roomManager;
     private final RabbitBus bus;
 
-    // Basic session bookkeeping
     private final Set<String> activeNicknamesLower = ConcurrentHashMap.newKeySet();
     private final Map<String, String> nicknameToRoom = new ConcurrentHashMap<>();
 
@@ -89,7 +79,6 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
         responseObserver.onNext(resp);
         responseObserver.onCompleted();
 
-        // Broadcast updated user list
         broadcastUserList(room);
     }
 
@@ -176,7 +165,6 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
             return;
         }
 
-        // swap in sets/maps
         activeNicknamesLower.remove(oldNick.toLowerCase(Locale.ROOT));
         activeNicknamesLower.add(newNick.toLowerCase(Locale.ROOT));
 
@@ -210,8 +198,6 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
             return;
         }
 
-        // Persist only what your original server persisted.
-        // Cursor is not persisted; Clear/Delete/Shape/Image/Chat are persisted in Room.
         Room room = roomManager.getRoom(roomCode);
         if (room == null) {
             responseObserver.onNext(Ack.newBuilder().setSuccess(false).setErrorMessage("Room not found.").build());
@@ -227,7 +213,6 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
             return;
         }
 
-        // Publish live to RabbitMQ
         Channel ch = null;
         try {
             ch = bus.openChannel();
@@ -299,16 +284,8 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
             });
         }
 
-        // When client cancels stream, gRPC will drop; we can't always detect
-        // immediately without interceptors.
-        // Best-effort: rely on Rabbit auto-delete exclusive queue + channel close when
-        // JVM detects cancellation.
-        // We'll close channel when StreamObserver errors/completes; but we don't get
-        // callbacks here.
-        // So: we attach a weak cleanup via a thread that monitors interruption.
         new Thread(() -> {
             try {
-                // Keep thread alive until channel is closed by broker/recovery.
                 while (ch.isOpen()) {
                     Thread.sleep(2500);
                 }
@@ -350,7 +327,6 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
     }
 
     private RoomEnterResponse buildEnterResponse(Room room) {
-        // Snapshot = persisted canvas items + persisted chat messages (history)
         List<Event> snapshot = GrpcRoomSnapshot.buildSnapshot(room);
         List<String> users = room.getMemberNicknames();
 

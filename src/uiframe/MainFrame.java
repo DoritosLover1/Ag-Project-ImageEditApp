@@ -202,7 +202,6 @@ public class MainFrame {
                 }
             }
             try {
-                // gRPC endpoint (recommended default: localhost:50051)
                 this.networkManager = new GrpcClientNetworkManager(ip, port, canvas, chatPanel);
                 this.networkManager.setVoiceManager(this.voiceManager);
                 networkManager.setOnRoomJoined(code -> {
@@ -343,7 +342,8 @@ public class MainFrame {
 
         memberList.setCellRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected,
+                    boolean cellHasFocus) {
                 Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value != null && voiceManager != null) {
                     String rawName = value.toString().replace(" (Siz)", "");
@@ -702,7 +702,7 @@ public class MainFrame {
             gbc.weightx = 0.4;
             dialog.add(colorBtns[i], gbc);
         }
-        // Ses ayarı eklendi
+
         JLabel volLabel = new JLabel("Ses Seviyesi:");
         volLabel.setForeground(theme.titleText);
         volLabel.setFont(new Font("Arial", Font.PLAIN, 13));
@@ -768,11 +768,9 @@ public class MainFrame {
     }
 
     private void rebuildPanels() {
-        // Canvas snapshot'ını al
         java.util.List<CanvasItem> snap = (canvas != null && currentScreen.equals("CANVAS")) ? canvas.getItemsSnapshot()
                 : null;
 
-        // ChatPanel'i geçici olarak sakla (mesajları kaybetmemek için)
         ChatPanel savedChatPanel = chatPanel;
 
         mainPanel.removeAll();
@@ -789,7 +787,6 @@ public class MainFrame {
             setupNetworkHooks();
         }
 
-        // ChatPanel'i geri yükle (tema güncellemesi ile)
         if (savedChatPanel != null) {
             chatPanel = savedChatPanel;
             chatPanel.updateTheme(theme);

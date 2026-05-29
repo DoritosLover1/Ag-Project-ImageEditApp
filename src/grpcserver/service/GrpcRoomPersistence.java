@@ -16,7 +16,6 @@ final class GrpcRoomPersistence {
         if (room == null || ev == null)
             return;
 
-        // Only persist what original server persisted
         switch (ev.getType()) {
             case EVENT_TYPE_SHAPE -> persistShape(room, ev);
             case EVENT_TYPE_IMAGE -> persistImage(room, ev);
@@ -24,7 +23,6 @@ final class GrpcRoomPersistence {
             case EVENT_TYPE_CLEAR -> persistClear(room, ev);
             case EVENT_TYPE_CHAT -> persistChat(room, ev);
             default -> {
-                // cursor, user_list, chat_history: not persisted as live events
             }
         }
     }

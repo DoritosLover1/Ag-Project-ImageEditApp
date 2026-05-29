@@ -15,12 +15,6 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
-/**
- * Minimal RabbitMQ helper for room-scoped fanout.
- *
- * Exchange per room: paicollab.room.<ROOM_CODE> (type: fanout)
- * Each subscriber gets an exclusive auto-delete queue bound to that exchange.
- */
 public final class RabbitBus implements Closeable {
     public static final String ROOM_EXCHANGE_PREFIX = "paicollab.room.";
 
@@ -62,16 +56,11 @@ public final class RabbitBus implements Closeable {
         ch.basicPublish(roomExchange(roomCode), "", props, payload);
     }
 
-    /**
-     * Create an exclusive queue bound to room exchange, consume it, and call handler for each delivery.
-     * Returns consumerTag; caller must cancel it.
-     */
     public String subscribeRoom(Channel ch,
-                               String roomCode,
-                               BiConsumer<byte[], Map<String, Object>> handler) throws IOException {
+            String roomCode,
+            BiConsumer<byte[], Map<String, Object>> handler) throws IOException {
         ensureRoomExchange(ch, roomCode);
 
-        // Exclusive, server-named queue; auto-delete when channel/connection closes
         String queue = ch.queueDeclare("", false, true, true, null).getQueue();
         ch.queueBind(queue, roomExchange(roomCode), "");
 
@@ -79,7 +68,8 @@ public final class RabbitBus implements Closeable {
         DeliverCallback cb = (consumerTag, delivery) -> {
             handler.accept(delivery.getBody(), delivery.getProperties().getHeaders());
         };
-        return ch.basicConsume(queue, true, cb, consumerTag -> { });
+        return ch.basicConsume(queue, true, cb, consumerTag -> {
+        });
     }
 
     public static String envOrDefault(String v, String def) {
@@ -107,4 +97,3 @@ public final class RabbitBus implements Closeable {
         connection.close();
     }
 }
-

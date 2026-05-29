@@ -38,6 +38,7 @@ public final class GrpcClientNetworkManager {
 
     private volatile uiframe.DrawingCanvas canvas;
     private volatile uiframe.ChatPanel chatPanel;
+    private volatile VoiceChatManager voiceManager;
 
     // Callbacks (similar to TCP manager)
     private Consumer<String> onRoomJoined;
@@ -68,6 +69,13 @@ public final class GrpcClientNetworkManager {
 
     public void setChatPanel(uiframe.ChatPanel chatPanel) {
         this.chatPanel = chatPanel;
+    }
+
+    public void setVoiceManager(VoiceChatManager voiceManager) {
+        this.voiceManager = voiceManager;
+        if (this.voiceManager != null) {
+            this.voiceManager.setOnAudioCaptured(this::sendAudio);
+        }
     }
 
     public void connectAndLogin(String requestedNickname) {
@@ -227,6 +235,18 @@ public final class GrpcClientNetworkManager {
                         .setH(pi.getHeightOfImage())
                         .setPngBytes(com.google.protobuf.ByteString.copyFrom(pi.getImageData()))
                         .build())
+                .build();
+        sendEventAsync(ev);
+    }
+
+    public void sendAudio(byte[] audioData) {
+        if (audioData == null || roomCode == null) return;
+        Event ev = Event.newBuilder()
+                .setRoomCode(roomCode)
+                .setTimestampMs(System.currentTimeMillis())
+                .setSender(nickname)
+                .setType(EventType.EVENT_TYPE_AUDIO)
+                .setAudio(AudioEvent.newBuilder().setAudioData(com.google.protobuf.ByteString.copyFrom(audioData)).build())
                 .build();
         sendEventAsync(ev);
     }
@@ -429,6 +449,14 @@ public final class GrpcClientNetworkManager {
                             }
                             case EVENT_TYPE_CHAT_HISTORY: {
                                 // live-only streams shouldn't send this; ignore
+                                break;
+                            }
+                            case EVENT_TYPE_AUDIO: {
+                                if (voiceManager != null && ev.hasAudio()) {
+                                    if (sender != null && !sender.equals(nickname)) {
+                                        voiceManager.playAudio(sender, ev.getAudio().getAudioData().toByteArray());
+                                    }
+                                }
                                 break;
                             }
                             default:

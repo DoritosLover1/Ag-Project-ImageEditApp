@@ -23,6 +23,7 @@ public class MainFrame {
     private JLabel roomCodeLabel;
     private DrawingCanvas canvas;
     private GrpcClientNetworkManager networkManager;
+    private VoiceChatManager voiceManager = new VoiceChatManager();
     private DefaultListModel<String> memberModel;
     private DefaultListModel<String> itemListModel;
     private ChatPanel chatPanel;
@@ -112,6 +113,13 @@ public class MainFrame {
         cardLayout.show(mainPanel, "CANVAS");
         frame.setMinimumSize(CANVAS_MIN_SIZE);
         resizeFrame(null, true);
+        if (voiceManager != null) {
+            try {
+                voiceManager.start(null, null);
+            } catch (Exception e) {
+                System.err.println("VoiceChatManager başlatılamadı: " + e.getMessage());
+            }
+        }
     }
 
     private void resizeFrame(Dimension size, boolean maximize) {
@@ -196,6 +204,7 @@ public class MainFrame {
             try {
                 // gRPC endpoint (recommended default: localhost:50051)
                 this.networkManager = new GrpcClientNetworkManager(ip, port, canvas, chatPanel);
+                this.networkManager.setVoiceManager(this.voiceManager);
                 networkManager.setOnRoomJoined(code -> {
                     this.myRoomCode = code;
                     goCanvas();
@@ -331,6 +340,35 @@ public class MainFrame {
         memberList.setForeground(theme.titleText);
         memberList.setFont(new Font("SansSerif", Font.PLAIN, 12));
         memberList.setBorder(new EmptyBorder(4, 8, 4, 8));
+
+        memberList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null && voiceManager != null) {
+                    String rawName = value.toString().replace(" (Siz)", "");
+                    if (voiceManager.isUserMuted(rawName)) {
+                        setText("<html><strike>" + value.toString() + "</strike></html>");
+                    }
+                }
+                return c;
+            }
+        });
+
+        memberList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                int index = memberList.locationToIndex(e.getPoint());
+                if (index >= 0) {
+                    String valStr = memberModel.get(index);
+                    String rawName = valStr.replace(" (Siz)", "");
+                    if (!rawName.equals(username) && voiceManager != null) {
+                        voiceManager.toggleMuteUser(rawName);
+                        memberList.repaint();
+                    }
+                }
+            }
+        });
         JScrollPane memberScroll = new JScrollPane(memberList);
         memberScroll.setBorder(null);
         memberScroll.getViewport().setBackground(theme.sidebarBg);
@@ -534,6 +572,9 @@ public class MainFrame {
             if (networkManager != null) {
                 networkManager.leaveRoom();
             }
+            if (voiceManager != null) {
+                voiceManager.stop();
+            }
             if (memberModel != null)
                 memberModel.clear();
             if (itemListModel != null)
@@ -661,6 +702,25 @@ public class MainFrame {
             gbc.weightx = 0.4;
             dialog.add(colorBtns[i], gbc);
         }
+        // Ses ayarı eklendi
+        JLabel volLabel = new JLabel("Ses Seviyesi:");
+        volLabel.setForeground(theme.titleText);
+        volLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        JSlider volSlider = new JSlider(0, 100, 100);
+        volSlider.setBackground(theme.background);
+        volSlider.addChangeListener(ev -> {
+            if (voiceManager != null) {
+                voiceManager.setOutputVolume(volSlider.getValue() / 100f);
+            }
+        });
+        gbc.gridx = 0;
+        gbc.gridy = labels.length + 1;
+        gbc.weightx = 0.6;
+        dialog.add(volLabel, gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 0.4;
+        dialog.add(volSlider, gbc);
+
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         btnRow.setOpaque(false);
         JButton applyBtn = new CustomButton("Uygula", theme);
@@ -689,7 +749,7 @@ public class MainFrame {
         btnRow.add(cancelBtn);
         btnRow.add(applyBtn);
         gbc.gridx = 0;
-        gbc.gridy = labels.length + 1;
+        gbc.gridy = labels.length + 2;
         gbc.gridwidth = 2;
         gbc.insets = new Insets(16, 12, 12, 12);
         dialog.add(btnRow, gbc);

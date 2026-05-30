@@ -74,4 +74,3 @@ public final class GrpcServerMain {
         return s.trim().replace("\"", "");
     }
 }
-

@@ -52,9 +52,12 @@ public class MainFrame {
 
     public AppTheme theme = new AppTheme();
     private static final String SETTINGS_FILE = "theme.properties";
+    private static final String USER_PREFS_FILE = "user.properties";
+    private float savedVolume = 1.0f;
 
     public MainFrame() {
         loadTheme();
+        loadUserPrefs();
         init();
     }
 
@@ -706,7 +709,7 @@ public class MainFrame {
         JLabel volLabel = new JLabel("Ses Seviyesi:");
         volLabel.setForeground(theme.titleText);
         volLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        JSlider volSlider = new JSlider(0, 100, 100);
+        JSlider volSlider = new JSlider(0, 100, (int) (savedVolume * 100));
         volSlider.setBackground(theme.background);
         volSlider.addChangeListener(ev -> {
             if (voiceManager != null) {
@@ -742,6 +745,8 @@ public class MainFrame {
             theme.chatMsgText = temp.chatMsgText;
             theme.themeIndex = presetCombo.getSelectedIndex();
             saveTheme();
+            savedVolume = volSlider.getValue() / 100f;
+            saveUserPrefs();
             rebuildPanels();
             dialog.dispose();
         });
@@ -849,6 +854,29 @@ public class MainFrame {
             case 11 -> t.chatMsgOther = c;
             case 12 -> t.chatMsgTime = c;
             case 13 -> t.chatMsgText = c;
+        }
+    }
+
+    private void saveUserPrefs() {
+        java.util.Properties prefs = new java.util.Properties();
+        prefs.setProperty("volume", String.valueOf(savedVolume));
+        try (java.io.FileOutputStream out = new java.io.FileOutputStream(USER_PREFS_FILE)) {
+            prefs.store(out, "User Preferences");
+        } catch (java.io.IOException e) {
+            System.err.println("Kullanıcı ayarları kaydedilemedi: " + e.getMessage());
+        }
+    }
+
+    private void loadUserPrefs() {
+        java.util.Properties prefs = new java.util.Properties();
+        try (java.io.FileInputStream in = new java.io.FileInputStream(USER_PREFS_FILE)) {
+            prefs.load(in);
+            savedVolume = Float.parseFloat(prefs.getProperty("volume", "1.0"));
+        } catch (java.io.IOException e) {
+            // Dosya yoksa varsayılan (1.0) kullan
+        }
+        if (voiceManager != null) {
+            voiceManager.setOutputVolume(savedVolume);
         }
     }
 

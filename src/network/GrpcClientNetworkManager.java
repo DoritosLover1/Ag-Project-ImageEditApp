@@ -462,7 +462,7 @@ public final class GrpcClientNetworkManager {
                                     return; // Expected when leaving room
                                 }
                             }
-                            if (t.getMessage() != null && t.getMessage().contains("CANCELLED")) {
+                            if (t.getMessage() != null && (t.getMessage().toUpperCase().contains("CANCELLED") || t.getMessage().contains("Stream closed"))) {
                                 return;
                             }
                             fireError(t.getMessage());
@@ -485,16 +485,23 @@ public final class GrpcClientNetworkManager {
     }
 
     private void sendEventAsync(Event ev) {
-        new Thread(() -> {
-            try {
-                Ack ack = blocking.sendEvent(ev);
+        async.sendEvent(ev, new StreamObserver<Ack>() {
+            @Override
+            public void onNext(Ack ack) {
                 if (!ack.getSuccess()) {
-                    fireError(ack.getErrorMessage());
+                    System.err.println("SendEvent failed: " + ack.getErrorMessage());
                 }
-            } catch (Exception e) {
-                fireError(e.getMessage());
             }
-        }, "grpc-send-event").start();
+
+            @Override
+            public void onError(Throwable t) {
+                System.err.println("SendEvent exception: " + t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+            }
+        });
     }
 
     private void fireError(String msg) {

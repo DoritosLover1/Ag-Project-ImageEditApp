@@ -21,9 +21,17 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
     private final Set<String> activeNicknamesLower = ConcurrentHashMap.newKeySet();
     private final Map<String, String> nicknameToRoom = new ConcurrentHashMap<>();
 
+    private Channel sharedPublishChannel;
+
     public PaiCollabGrpcService(RoomManager roomManager, RabbitBus bus) {
         this.roomManager = roomManager;
         this.bus = bus;
+        try {
+            this.sharedPublishChannel = bus.openChannel();
+        } catch (IOException e) {
+            System.err.println("[gRPC] Failed to open shared publish channel: " + e.getMessage());
+            this.sharedPublishChannel = null;
+        }
     }
 
     @Override
@@ -213,23 +221,18 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
             return;
         }
 
-        Channel ch = null;
         try {
-            ch = bus.openChannel();
-            bus.publishRoom(ch, roomCode, request.toByteArray());
+            synchronized (this) {
+                if (sharedPublishChannel == null || !sharedPublishChannel.isOpen()) {
+                    sharedPublishChannel = bus.openChannel(); // Kanal kazara kapandıysa iyileşme (recovery)
+                }
+                bus.publishRoom(sharedPublishChannel, roomCode, request.toByteArray());
+            }
         } catch (IOException e) {
             responseObserver.onNext(Ack.newBuilder().setSuccess(false).setErrorMessage("Publish failed.").build());
             responseObserver.onCompleted();
             return;
-        } finally {
-            if (ch != null) {
-                try {
-                    ch.close();
-                } catch (Exception ignored) {
-                }
-            }
         }
-
         responseObserver.onNext(Ack.newBuilder().setSuccess(true).build());
         responseObserver.onCompleted();
     }
@@ -249,16 +252,9 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
             return;
         }
 
-        Channel ch;
         try {
-            ch = bus.openChannel();
-        } catch (IOException e) {
-            responseObserver.onError(Status.UNAVAILABLE.withDescription("RabbitMQ unavailable").asRuntimeException());
-            return;
-        }
+            final Channel ch = bus.openChannel();
 
-        final String[] consumerTagHolder = new String[1];
-        try {
             String tag = bus.subscribeRoom(ch, roomCode, (body, headers) -> {
                 try {
                     Event ev = Event.parseFrom(body);
@@ -266,40 +262,29 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
                 } catch (Exception ignored) {
                 }
             });
-            consumerTagHolder[0] = tag;
-        } catch (IOException e) {
-            safeClose(ch);
-            responseObserver
-                    .onError(Status.UNAVAILABLE.withDescription("RabbitMQ subscribe failed").asRuntimeException());
-            return;
-        }
 
-        if (responseObserver instanceof io.grpc.stub.ServerCallStreamObserver) {
-            io.grpc.stub.ServerCallStreamObserver<Event> serverCallObserver = (io.grpc.stub.ServerCallStreamObserver<Event>) responseObserver;
-            serverCallObserver.setOnCancelHandler(() -> {
-                leaveRoomInternal(nick);
-                safeClose(ch);
-                activeNicknamesLower.remove(nick.toLowerCase(Locale.ROOT));
-                System.out.println("[gRPC] User " + nick + " left room (stream cancelled)");
-            });
-        }
+            if (responseObserver instanceof io.grpc.stub.ServerCallStreamObserver) {
+                io.grpc.stub.ServerCallStreamObserver<Event> serverCallObserver = (io.grpc.stub.ServerCallStreamObserver<Event>) responseObserver;
 
-        new Thread(() -> {
-            try {
-                while (ch.isOpen()) {
-                    Thread.sleep(2500);
-                }
-            } catch (InterruptedException ignored) {
-            } finally {
-                try {
-                    if (consumerTagHolder[0] != null && ch.isOpen()) {
-                        ch.basicCancel(consumerTagHolder[0]);
+                serverCallObserver.setOnCancelHandler(() -> {
+                    try {
+                        if (ch.isOpen() && tag != null) {
+                            ch.basicCancel(tag);
+                        }
+                    } catch (Exception ignored) {
                     }
-                } catch (Exception ignored) {
-                }
-                safeClose(ch);
+
+                    leaveRoomInternal(nick);
+                    safeClose(ch);
+                    activeNicknamesLower.remove(nick.toLowerCase(Locale.ROOT));
+                    System.out.println("[gRPC] User " + nick + " left room and RabbitMQ channel closed safely.");
+                });
             }
-        }, "grpc-subscribe-" + nick + "-" + roomCode).start();
+
+        } catch (IOException e) {
+            responseObserver
+                    .onError(Status.UNAVAILABLE.withDescription("RabbitMQ connection failed").asRuntimeException());
+        }
     }
 
     private void broadcastUserList(Room room) {

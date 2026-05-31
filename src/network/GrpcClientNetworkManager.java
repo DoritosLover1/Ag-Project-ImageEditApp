@@ -414,12 +414,6 @@ public final class GrpcClientNetworkManager {
                                     }
                                     break;
                                 }
-                                case EVENT_TYPE_CLEAR: {
-                                    if (canvas != null) {
-                                        canvas.clearCanvas();
-                                    }
-                                    break;
-                                }
                                 case EVENT_TYPE_CURSOR: {
                                     if (canvas == null || !ev.hasCursor())
                                         break;
@@ -428,6 +422,12 @@ public final class GrpcClientNetworkManager {
                                     CursorEvent ce = ev.getCursor();
                                     canvas.updateRemoteCursor(
                                             new CursorPosition(ce.getX(), ce.getY(), sender, ce.getColor()));
+                                    break;
+                                }
+                                case EVENT_TYPE_CLEAR: {
+                                    if (canvas != null) {
+                                        canvas.clearCanvas();
+                                    }
                                     break;
                                 }
                                 case EVENT_TYPE_CHAT: {
@@ -454,6 +454,17 @@ public final class GrpcClientNetworkManager {
 
                         @Override
                         public void onError(Throwable t) {
+                            if (roomCode == null)
+                                return;
+                            if (t instanceof io.grpc.StatusRuntimeException) {
+                                io.grpc.Status status = ((io.grpc.StatusRuntimeException) t).getStatus();
+                                if (status.getCode() == io.grpc.Status.Code.CANCELLED) {
+                                    return; // Expected when leaving room
+                                }
+                            }
+                            if (t.getMessage() != null && t.getMessage().contains("CANCELLED")) {
+                                return;
+                            }
                             fireError(t.getMessage());
                         }
 

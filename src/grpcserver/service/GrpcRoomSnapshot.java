@@ -19,29 +19,32 @@ public final class GrpcRoomSnapshot {
             return out;
 
         for (CanvasItem item : room.getCanvasSnapshot()) {
+            String sender = item.getAddedBy() == null ? "Unknown" : item.getAddedBy();
             if (item.getItemType() == CanvasItem.ItemType.SHAPE) {
+                if (item.getShape() == null) continue;
                 Event ev = Event.newBuilder()
                         .setRoomCode(room.getCode())
                         .setTimestampMs(System.currentTimeMillis())
-                        .setSender(item.getAddedBy())
+                        .setSender(sender)
                         .setType(EventType.EVENT_TYPE_SHAPE)
                         .setShape(fromDrawShape(item.getShape()))
                         .build();
                 out.add(ev);
             } else {
                 PastedImage img = item.getImage();
+                if (img == null) continue;
                 Event ev = Event.newBuilder()
                         .setRoomCode(room.getCode())
                         .setTimestampMs(System.currentTimeMillis())
-                        .setSender(item.getAddedBy())
+                        .setSender(sender)
                         .setType(EventType.EVENT_TYPE_IMAGE)
                         .setImage(ImageEvent.newBuilder()
-                                .setId(img.getIdOfImage())
+                                .setId(img.getIdOfImage() == null ? "" : img.getIdOfImage())
                                 .setX(img.getXOfImage())
                                 .setY(img.getYOfImage())
                                 .setW(img.getWidthOfImage())
                                 .setH(img.getHeightOfImage())
-                                .setPngBytes(com.google.protobuf.ByteString.copyFrom(img.getImageData()))
+                                .setPngBytes(img.getImageData() == null ? com.google.protobuf.ByteString.EMPTY : com.google.protobuf.ByteString.copyFrom(img.getImageData()))
                                 .build())
                         .build();
                 out.add(ev);

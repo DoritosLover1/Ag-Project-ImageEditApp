@@ -283,10 +283,16 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
                     } catch (Exception ignored) {
                     }
 
-                    leaveRoomInternal(nick);
+                    String currentRoom = nicknameToRoom.get(nick);
+                    if (currentRoom != null && currentRoom.equals(roomCode)) {
+                        // They disconnected abruptly without calling leaveRoom RPC
+                        leaveRoomInternal(nick);
+                        activeNicknamesLower.remove(nick.toLowerCase(Locale.ROOT));
+                        System.out.println("[gRPC] User " + nick + " disconnected abruptly. Removed from server.");
+                    } else {
+                        System.out.println("[gRPC] User " + nick + " closed subscription intentionally.");
+                    }
                     safeClose(ch);
-                    activeNicknamesLower.remove(nick.toLowerCase(Locale.ROOT));
-                    System.out.println("[gRPC] User " + nick + " left room and RabbitMQ channel closed safely.");
                 });
             }
 

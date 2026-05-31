@@ -49,8 +49,13 @@ public final class RabbitBus implements Closeable {
 
     public void ensureRoomExchange(Channel ch, String roomCode) throws IOException {
         String exchangeName = roomExchange(roomCode);
-        if (declaredExchanges.putIfAbsent(exchangeName, true) == null) {
-            ch.exchangeDeclare(exchangeName, BuiltinExchangeType.FANOUT, true);
+        if (!declaredExchanges.containsKey(exchangeName)) {
+            synchronized (declaredExchanges) {
+                if (!declaredExchanges.containsKey(exchangeName)) {
+                    ch.exchangeDeclare(exchangeName, BuiltinExchangeType.FANOUT, true);
+                    declaredExchanges.put(exchangeName, true);
+                }
+            }
         }
     }
 

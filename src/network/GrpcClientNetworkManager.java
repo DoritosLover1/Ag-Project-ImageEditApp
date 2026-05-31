@@ -464,7 +464,7 @@ public final class GrpcClientNetworkManager {
         });
     }
 
-    private io.grpc.Context.CancellableContext subscribeContext;
+    private volatile io.grpc.Context.CancellableContext subscribeContext;
 
     private void cancelSubscribe() {
         if (subscribeContext != null) {

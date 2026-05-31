@@ -255,8 +255,17 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
         try {
             final Channel ch = bus.openChannel();
 
+            io.grpc.stub.ServerCallStreamObserver<Event> serverCallObserver = null;
+            if (responseObserver instanceof io.grpc.stub.ServerCallStreamObserver) {
+                serverCallObserver = (io.grpc.stub.ServerCallStreamObserver<Event>) responseObserver;
+            }
+            final io.grpc.stub.ServerCallStreamObserver<Event> finalServerCallObserver = serverCallObserver;
+
             String tag = bus.subscribeRoom(ch, roomCode, (body, headers) -> {
                 try {
+                    if (finalServerCallObserver != null && finalServerCallObserver.isCancelled()) {
+                        return;
+                    }
                     Event ev = Event.parseFrom(body);
                     responseObserver.onNext(ev);
                 } catch (Exception ignored) {
@@ -264,9 +273,9 @@ public final class PaiCollabGrpcService extends PaiCollabServiceGrpc.PaiCollabSe
             });
 
             if (responseObserver instanceof io.grpc.stub.ServerCallStreamObserver) {
-                io.grpc.stub.ServerCallStreamObserver<Event> serverCallObserver = (io.grpc.stub.ServerCallStreamObserver<Event>) responseObserver;
+                io.grpc.stub.ServerCallStreamObserver<Event> serverCallObservere = (io.grpc.stub.ServerCallStreamObserver<Event>) responseObserver;
 
-                serverCallObserver.setOnCancelHandler(() -> {
+                serverCallObservere.setOnCancelHandler(() -> {
                     try {
                         if (ch.isOpen() && tag != null) {
                             ch.basicCancel(tag);

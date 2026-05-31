@@ -12,6 +12,10 @@ import java.util.concurrent.TimeUnit;
 
 public final class GrpcServerMain {
     public static void main(String[] args) throws Exception {
+        // Suppress Netty's normal stream closed warnings which spam the console
+        java.util.logging.Logger.getLogger("io.grpc.netty").setLevel(java.util.logging.Level.SEVERE);
+        java.util.logging.Logger.getLogger("io.netty").setLevel(java.util.logging.Level.SEVERE);
+
         Properties env = loadDotEnv();
 
         int grpcPort = parseInt(env.getProperty("GRPC_PORT"), 50051);

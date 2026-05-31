@@ -361,105 +361,116 @@ public final class GrpcClientNetworkManager {
         if (roomCode == null)
             return;
 
-        async.subscribe(SubscribeRequest.newBuilder()
-                .setNickname(nickname)
-                .setRoomCode(roomCode)
-                .build(), new StreamObserver<>() {
-                    @Override
-                    public void onNext(Event ev) {
-                        if (ev == null)
-                            return;
-                        if (roomCode == null)
-                            return;
-                        if (ev.getRoomCode() == null || !ev.getRoomCode().equals(roomCode))
-                            return;
+        subscribeContext = io.grpc.Context.current().withCancellation();
+        subscribeContext.run(() -> {
+            async.subscribe(SubscribeRequest.newBuilder()
+                    .setNickname(nickname)
+                    .setRoomCode(roomCode)
+                    .build(), new StreamObserver<>() {
+                        @Override
+                        public void onNext(Event ev) {
+                            if (ev == null)
+                                return;
+                            if (roomCode == null)
+                                return;
+                            if (ev.getRoomCode() == null || !ev.getRoomCode().equals(roomCode))
+                                return;
 
-                        String sender = ev.getSender();
-                        switch (ev.getType()) {
-                            case EVENT_TYPE_USER_LIST: {
-                                if (onUserListUpdated != null && ev.hasUserList()) {
-                                    SwingUtilities.invokeLater(
-                                            () -> onUserListUpdated.accept(ev.getUserList().getUsersList()));
-                                }
-                                break;
-                            }
-                            case EVENT_TYPE_SHAPE: {
-                                if (canvas != null && ev.hasShape()) {
-                                    DrawShape s = GrpcRoomSnapshot.toDrawShape(ev.getShape());
-                                    canvas.addShapeSilently(s, sender);
-                                }
-                                break;
-                            }
-                            case EVENT_TYPE_IMAGE: {
-                                if (canvas != null && ev.hasImage()) {
-                                    ImageEvent imgEv = ev.getImage();
-                                    PastedImage pi = new PastedImage();
-                                    pi.setIdOfImage(imgEv.getId());
-                                    pi.setXOfImage(imgEv.getX());
-                                    pi.setYOfImage(imgEv.getY());
-                                    pi.setWidthOfImage(imgEv.getW());
-                                    pi.setHeightOfImage(imgEv.getH());
-                                    pi.setImageData(imgEv.getPngBytes().toByteArray());
-                                    canvas.addRemoteImage(pi, sender);
-                                }
-                                break;
-                            }
-                            case EVENT_TYPE_DELETE: {
-                                if (canvas != null && ev.hasDelete()) {
-                                    canvas.removeItemById(ev.getDelete().getTargetId());
-                                }
-                                break;
-                            }
-                            case EVENT_TYPE_CLEAR: {
-                                if (canvas != null) {
-                                    canvas.clearCanvas();
-                                }
-                                break;
-                            }
-                            case EVENT_TYPE_CURSOR: {
-                                if (canvas == null || !ev.hasCursor())
-                                    break;
-                                if (sender != null && sender.equals(nickname))
-                                    break;
-                                CursorEvent ce = ev.getCursor();
-                                canvas.updateRemoteCursor(
-                                        new CursorPosition(ce.getX(), ce.getY(), sender, ce.getColor()));
-                                break;
-                            }
-                            case EVENT_TYPE_CHAT: {
-                                if (chatPanel != null && ev.hasChat()) {
-                                    chatPanel.receiveMessage(sender, ev.getChat().getMessage());
-                                }
-                                break;
-                            }
-                            case EVENT_TYPE_CHAT_HISTORY: {
-                                break;
-                            }
-                            case EVENT_TYPE_AUDIO: {
-                                if (voiceManager != null && ev.hasAudio()) {
-                                    if (sender != null && !sender.equals(nickname)) {
-                                        voiceManager.playAudio(sender, ev.getAudio().getAudioData().toByteArray());
+                            String sender = ev.getSender();
+                            switch (ev.getType()) {
+                                case EVENT_TYPE_USER_LIST: {
+                                    if (onUserListUpdated != null && ev.hasUserList()) {
+                                        SwingUtilities.invokeLater(
+                                                () -> onUserListUpdated.accept(ev.getUserList().getUsersList()));
                                     }
+                                    break;
                                 }
-                                break;
+                                case EVENT_TYPE_SHAPE: {
+                                    System.out.println("[DEBUG] Received SHAPE event from: " + sender + ", canvas is: "
+                                            + (canvas != null));
+                                    if (canvas != null && ev.hasShape()) {
+                                        DrawShape s = GrpcRoomSnapshot.toDrawShape(ev.getShape());
+                                        canvas.addShapeSilently(s, sender);
+                                    }
+                                    break;
+                                }
+                                case EVENT_TYPE_IMAGE: {
+                                    if (canvas != null && ev.hasImage()) {
+                                        ImageEvent imgEv = ev.getImage();
+                                        PastedImage pi = new PastedImage();
+                                        pi.setIdOfImage(imgEv.getId());
+                                        pi.setXOfImage(imgEv.getX());
+                                        pi.setYOfImage(imgEv.getY());
+                                        pi.setWidthOfImage(imgEv.getW());
+                                        pi.setHeightOfImage(imgEv.getH());
+                                        pi.setImageData(imgEv.getPngBytes().toByteArray());
+                                        canvas.addRemoteImage(pi, sender);
+                                    }
+                                    break;
+                                }
+                                case EVENT_TYPE_DELETE: {
+                                    if (canvas != null && ev.hasDelete()) {
+                                        canvas.removeItemById(ev.getDelete().getTargetId());
+                                    }
+                                    break;
+                                }
+                                case EVENT_TYPE_CLEAR: {
+                                    if (canvas != null) {
+                                        canvas.clearCanvas();
+                                    }
+                                    break;
+                                }
+                                case EVENT_TYPE_CURSOR: {
+                                    if (canvas == null || !ev.hasCursor())
+                                        break;
+                                    if (sender != null && sender.equals(nickname))
+                                        break;
+                                    CursorEvent ce = ev.getCursor();
+                                    canvas.updateRemoteCursor(
+                                            new CursorPosition(ce.getX(), ce.getY(), sender, ce.getColor()));
+                                    break;
+                                }
+                                case EVENT_TYPE_CHAT: {
+                                    if (chatPanel != null && ev.hasChat()) {
+                                        chatPanel.receiveMessage(sender, ev.getChat().getMessage());
+                                    }
+                                    break;
+                                }
+                                case EVENT_TYPE_CHAT_HISTORY: {
+                                    break;
+                                }
+                                case EVENT_TYPE_AUDIO: {
+                                    if (voiceManager != null && ev.hasAudio()) {
+                                        if (sender != null && !sender.equals(nickname)) {
+                                            voiceManager.playAudio(sender, ev.getAudio().getAudioData().toByteArray());
+                                        }
+                                    }
+                                    break;
+                                }
+                                default:
+                                    break;
                             }
-                            default:
-                                break;
                         }
-                    }
 
-                    @Override
-                    public void onError(Throwable t) {
-                        fireError(t.getMessage());
-                    }
+                        @Override
+                        public void onError(Throwable t) {
+                            fireError(t.getMessage());
+                        }
 
-                    @Override
-                    public void onCompleted() {
-                    }
-                });
+                        @Override
+                        public void onCompleted() {
+                        }
+                    });
+        });
     }
 
+    private io.grpc.Context.CancellableContext subscribeContext;
+
     private void cancelSubscribe() {
+        if (subscribeContext != null) {
+            subscribeContext.cancel(null);
+            subscribeContext = null;
+        }
     }
 
     private void sendEventAsync(Event ev) {

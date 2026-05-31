@@ -825,6 +825,9 @@ public class MainFrame {
     private void setupNetworkHooks() {
         if (networkManager == null)
             return;
+        networkManager.setCanvas(canvas);
+        networkManager.setChatPanel(chatPanel);
+
         canvas.setOnShapeDrawn(shape -> networkManager.sendShape(shape));
         canvas.setOnCursorMoved(cp -> networkManager.sendCursor(cp));
         canvas.setOnImagePasted(pi -> {

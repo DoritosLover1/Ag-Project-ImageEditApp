@@ -110,13 +110,19 @@ public class VoiceChatManager {
         }
     }
 
+    private final java.util.concurrent.ExecutorService audioExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+
     public void playAudio(String sender, byte[] audioData) {
         if (speaker == null || !speaker.isOpen())
             return;
         if (isUserMuted(sender))
             return;
 
-        speaker.write(audioData, 0, audioData.length);
+        audioExecutor.submit(() -> {
+            if (speaker != null && speaker.isOpen()) {
+                speaker.write(audioData, 0, audioData.length);
+            }
+        });
     }
 
     public void setOutputVolume(float volume) {

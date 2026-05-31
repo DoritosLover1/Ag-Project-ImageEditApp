@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 public final class RabbitBus implements Closeable {
     public static final String ROOM_EXCHANGE_PREFIX = "paicollab.room.";
 
@@ -39,12 +41,17 @@ public final class RabbitBus implements Closeable {
         return connection.createChannel();
     }
 
-    public static String roomExchange(String roomCode) {
-        return ROOM_EXCHANGE_PREFIX + roomCode;
+    private final ConcurrentHashMap<String, Boolean> declaredExchanges = new ConcurrentHashMap<>();
+
+    private String roomExchange(String roomCode) {
+        return "paicollab.room." + roomCode;
     }
 
     public void ensureRoomExchange(Channel ch, String roomCode) throws IOException {
-        ch.exchangeDeclare(roomExchange(roomCode), BuiltinExchangeType.FANOUT, true);
+        String exchangeName = roomExchange(roomCode);
+        if (declaredExchanges.putIfAbsent(exchangeName, true) == null) {
+            ch.exchangeDeclare(exchangeName, BuiltinExchangeType.FANOUT, true);
+        }
     }
 
     public void publishRoom(Channel ch, String roomCode, byte[] payload) throws IOException {

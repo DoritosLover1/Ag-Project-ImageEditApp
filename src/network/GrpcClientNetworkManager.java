@@ -350,15 +350,19 @@ public final class GrpcClientNetworkManager {
         }
     }
 
+    private volatile io.grpc.Context.CancellableContext subscribeContext;
+
     private void startSubscribe() {
         cancelSubscribe();
         if (roomCode == null)
             return;
 
-        async.subscribe(SubscribeRequest.newBuilder()
-                .setNickname(nickname)
-                .setRoomCode(roomCode)
-                .build(), new StreamObserver<>() {
+        subscribeContext = io.grpc.Context.current().withCancellation();
+        subscribeContext.run(() -> {
+            async.subscribe(SubscribeRequest.newBuilder()
+                    .setNickname(nickname)
+                    .setRoomCode(roomCode)
+                    .build(), new StreamObserver<>() {
                     @Override
                     public void onNext(Event ev) {
                         if (ev == null)
@@ -438,6 +442,14 @@ public final class GrpcClientNetworkManager {
 
                     @Override
                     public void onError(Throwable t) {
+                        if (roomCode == null) return;
+                        if (t instanceof io.grpc.StatusRuntimeException) {
+                            io.grpc.Status status = ((io.grpc.StatusRuntimeException) t).getStatus();
+                            if (status.getCode() == io.grpc.Status.Code.CANCELLED) return;
+                        }
+                        if (t.getMessage() != null && (t.getMessage().toUpperCase().contains("CANCELLED") || t.getMessage().contains("Stream closed"))) {
+                            return;
+                        }
                         fireError(t.getMessage());
                     }
 
@@ -445,24 +457,44 @@ public final class GrpcClientNetworkManager {
                     public void onCompleted() {
                     }
                 });
+        });
     }
 
     private void cancelSubscribe() {
-        // client-side cancel for server-streaming is done by shutting down the channel;
-        // keep it simple for now.
+        if (subscribeContext != null) {
+            subscribeContext.cancel(null);
+            subscribeContext = null;
+        }
     }
 
+    private long lastAsyncErrorTime = 0;
+
     private void sendEventAsync(Event ev) {
-        new Thread(() -> {
-            try {
-                Ack ack = blocking.sendEvent(ev);
+        async.sendEvent(ev, new StreamObserver<Ack>() {
+            @Override
+            public void onNext(Ack ack) {
                 if (!ack.getSuccess()) {
-                    fireError(ack.getErrorMessage());
+                    long now = System.currentTimeMillis();
+                    if (now - lastAsyncErrorTime > 2000) {
+                        System.err.println("SendEvent failed: " + ack.getErrorMessage());
+                        lastAsyncErrorTime = now;
+                    }
                 }
-            } catch (Exception e) {
-                fireError(e.getMessage());
             }
-        }, "grpc-send-event").start();
+
+            @Override
+            public void onError(Throwable t) {
+                long now = System.currentTimeMillis();
+                if (now - lastAsyncErrorTime > 2000) {
+                    System.err.println("SendEvent exception: " + t.getMessage());
+                    lastAsyncErrorTime = now;
+                }
+            }
+
+            @Override
+            public void onCompleted() {
+            }
+        });
     }
 
     private void fireError(String msg) {

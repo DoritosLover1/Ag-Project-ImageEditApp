@@ -283,10 +283,10 @@ public final class GrpcClientNetworkManager {
                 // Mimic old TCP order:
                 // 1) ROOM_INFO: clear canvas/chat/cursors
                 if (canvas != null) {
-                    canvas.clearCanvas();
+                    SwingUtilities.invokeLater(() -> canvas.clearCanvas());
                 }
                 if (chatPanel != null) {
-                    chatPanel.clearMessages();
+                    SwingUtilities.invokeLater(() -> chatPanel.clearMessages());
                 }
 
                 // 2) USER_LIST
@@ -319,7 +319,7 @@ public final class GrpcClientNetworkManager {
                     if (canvas == null || !ev.hasShape())
                         break;
                     DrawShape s = GrpcRoomSnapshot.toDrawShape(ev.getShape());
-                    canvas.addShapeSilently(s, sender);
+                    SwingUtilities.invokeLater(() -> canvas.addShapeSilently(s, sender));
                     break;
                 }
                 case EVENT_TYPE_IMAGE: {
@@ -333,14 +333,14 @@ public final class GrpcClientNetworkManager {
                     pi.setWidthOfImage(imgEv.getW());
                     pi.setHeightOfImage(imgEv.getH());
                     pi.setImageData(imgEv.getPngBytes().toByteArray());
-                    canvas.addRemoteImage(pi, sender);
+                    SwingUtilities.invokeLater(() -> canvas.addRemoteImage(pi, sender));
                     break;
                 }
                 case EVENT_TYPE_CHAT_HISTORY: {
                     if (chatPanel == null || !ev.hasChatHistory())
                         break;
                     ChatHistoryEvent h = ev.getChatHistory();
-                    chatPanel.receiveHistoryMessage(h.getOriginalSender(), h.getMessage(), h.getOriginalTimestampMs());
+                    SwingUtilities.invokeLater(() -> chatPanel.receiveHistoryMessage(h.getOriginalSender(), h.getMessage(), h.getOriginalTimestampMs()));
                     break;
                 }
                 default:
@@ -384,7 +384,7 @@ public final class GrpcClientNetworkManager {
                             case EVENT_TYPE_SHAPE: {
                                 if (canvas != null && ev.hasShape()) {
                                     DrawShape s = GrpcRoomSnapshot.toDrawShape(ev.getShape());
-                                    canvas.addShapeSilently(s, sender);
+                                    SwingUtilities.invokeLater(() -> canvas.addShapeSilently(s, sender));
                                 }
                                 break;
                             }
@@ -398,19 +398,19 @@ public final class GrpcClientNetworkManager {
                                     pi.setWidthOfImage(imgEv.getW());
                                     pi.setHeightOfImage(imgEv.getH());
                                     pi.setImageData(imgEv.getPngBytes().toByteArray());
-                                    canvas.addRemoteImage(pi, sender);
+                                    SwingUtilities.invokeLater(() -> canvas.addRemoteImage(pi, sender));
                                 }
                                 break;
                             }
                             case EVENT_TYPE_DELETE: {
                                 if (canvas != null && ev.hasDelete()) {
-                                    canvas.removeItemById(ev.getDelete().getTargetId());
+                                    SwingUtilities.invokeLater(() -> canvas.removeItemById(ev.getDelete().getTargetId()));
                                 }
                                 break;
                             }
                             case EVENT_TYPE_CLEAR: {
                                 if (canvas != null) {
-                                    canvas.clearCanvas();
+                                    SwingUtilities.invokeLater(() -> canvas.clearCanvas());
                                 }
                                 break;
                             }
@@ -421,13 +421,13 @@ public final class GrpcClientNetworkManager {
                                 if (sender != null && sender.equals(nickname))
                                     break;
                                 CursorEvent ce = ev.getCursor();
-                                canvas.updateRemoteCursor(
-                                        new CursorPosition(ce.getX(), ce.getY(), sender, ce.getColor()));
+                                SwingUtilities.invokeLater(() -> canvas.updateRemoteCursor(
+                                        new CursorPosition(ce.getX(), ce.getY(), sender, ce.getColor())));
                                 break;
                             }
                             case EVENT_TYPE_CHAT: {
                                 if (chatPanel != null && ev.hasChat()) {
-                                    chatPanel.receiveMessage(sender, ev.getChat().getMessage());
+                                    SwingUtilities.invokeLater(() -> chatPanel.receiveMessage(sender, ev.getChat().getMessage()));
                                 }
                                 break;
                             }
